@@ -1,0 +1,14 @@
+{
+  "name": "qrtoken",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+ 
+  "scripts": {
+    "dev:customer": "npm run dev --workspace=customer",
+    "dev:owner": "npm run dev --workspace=owner",
+    "dev:admin": "npm run dev --workspace=admin"
+  }
+}
