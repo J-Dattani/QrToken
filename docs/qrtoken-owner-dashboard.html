@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QRToken — Owner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C1A17; --ink-soft:#5B564C; --ink-faint:#8A8375;
+    --paper:#F7F4EE; --panel:#FFFFFF; --deep:#EFEAE0;
+    --line:#E1DACB; --line-soft:#EDE8DB;
+    --saffron:#C77C1F; --saffron-soft:#F3E2C4;
+    --teal:#1F6E5C; --teal-soft:#DCEDE7;
+    --amber:#B8791F; --amber-soft:#F3E6C9;
+    --red:#B23B2E; --red-soft:#F4DEDA;
+    --radius:10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter',sans-serif; color:var(--ink); font-size:14px;
+    background:
+      radial-gradient(600px 360px at 100% -8%, rgba(199,124,31,.08), transparent 55%),
+      radial-gradient(500px 320px at -6% 30%, rgba(31,110,92,.06), transparent 55%),
+      var(--paper);
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .disp{font-family:'Space Grotesk',sans-serif;}
+  button{font-family:inherit; cursor:pointer;}
+  *:focus-visible{outline:2px solid var(--saffron); outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important;} }
+  @keyframes viewIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+  @keyframes cardIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+  @keyframes barGrow{from{transform:scaleY(0);} to{transform:scaleY(1);}}
+  @keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(199,124,31,.5);} 50%{box-shadow:0 0 0 5px rgba(199,124,31,0);}}
+
+  .app{display:grid; grid-template-columns:220px 1fr; min-height:100vh;}
+  .sidebar{background:linear-gradient(180deg,#211E19,#17150F); color:#EDE9DE; padding:22px 14px; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; box-shadow:2px 0 24px -12px rgba(0,0,0,.4);}
+  .brand{display:flex; align-items:center; gap:10px; padding:0 6px 20px; border-bottom:1px solid rgba(255,255,255,0.1); margin-bottom:16px;}
+  .brand-mark{width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#E0A758,var(--saffron)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; color:var(--ink); font-size:15px; box-shadow:0 6px 14px -6px rgba(199,124,31,.6);}
+  .brand-name{font-family:'Space Grotesk'; font-weight:600; font-size:14px; line-height:1.1;}
+  .brand-sub{font-size:10px; color:#A79E8D; letter-spacing:.04em; text-transform:uppercase; margin-top:2px;}
+  .nav-group-label{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:#7C7364; padding:12px 8px 5px;}
+  .nav-item{display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:7px; color:#C9C2B2; font-size:13px; font-weight:500; cursor:pointer; transition:background .15s,color .15s,transform .15s;}
+  .nav-item svg{width:15px; height:15px; flex-shrink:0; opacity:.85;}
+  .nav-item:hover{background:rgba(255,255,255,0.06); color:#fff; transform:translateX(2px);}
+  .nav-item.active{background:linear-gradient(135deg,#E0A758,var(--saffron)); color:#1C1A17; font-weight:600; box-shadow:0 6px 14px -8px rgba(199,124,31,.6);}
+  .nav-item .nav-badge{animation:badgePulse 2.2s ease-in-out infinite;}
+  .sidebar-foot{margin-top:auto; padding-top:14px; border-top:1px solid rgba(255,255,255,0.1);}
+  .admin-chip{display:flex; align-items:center; gap:9px; padding:6px;}
+  .avatar{width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#E0A758,var(--saffron)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; color:var(--ink); font-size:12px;}
+  .admin-chip-name{font-size:12.5px; font-weight:600; color:#fff;}
+  .admin-chip-role{font-size:10.5px; color:#A79E8D;}
+
+  main{padding:26px 32px;}
+  .topbar{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; gap:20px;}
+  .page-title{font-family:'Space Grotesk'; font-size:23px; font-weight:600;}
+  .page-sub{color:var(--ink-soft); font-size:13.5px; margin-top:3px;}
+  .btn{border:1px solid var(--line); background:var(--panel); padding:9px 15px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink); transition:.15s;}
+  .btn:hover{border-color:var(--ink-faint); transform:translateY(-1px); box-shadow:0 4px 10px -6px rgba(28,26,23,.25);}
+  .btn-primary{background:linear-gradient(135deg,#2B2823,var(--ink)); color:#fff; border-color:var(--ink); box-shadow:0 6px 14px -8px rgba(28,26,23,.5);}
+  .btn-primary:hover{filter:brightness(1.15);}
+  .topbar-actions{display:flex; gap:10px;}
+
+  .view{display:none;} .view.active{display:block; animation:viewIn .3s cubic-bezier(.22,1,.36,1);}
+
+  .kpi-strip{display:flex; gap:14px; margin-bottom:20px;}
+  .kpi{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; flex:1; position:relative; overflow:hidden; box-shadow:0 1px 2px rgba(28,26,23,.03); transition:transform .18s, box-shadow .18s; animation:cardIn .35s cubic-bezier(.22,1,.36,1) backwards;}
+  .kpi::before{content:""; position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg,var(--saffron),#E0A758);}
+  .kpi:hover{transform:translateY(-2px); box-shadow:0 14px 26px -16px rgba(28,26,23,.35);}
+  .kpi-label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; font-weight:600;}
+  .kpi-value{font-family:'Space Grotesk'; font-size:21px; font-weight:700; margin-top:5px;}
+  .kpi-sub{font-size:11px; color:var(--ink-faint); margin-top:3px;}
+
+  /* ===== TOKEN STUB CARD — signature element ===== */
+  .stub-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .stub{background:var(--panel); border:1px solid var(--line); border-radius:12px; display:flex; position:relative; box-shadow:0 2px 6px -3px rgba(28,26,23,.08); overflow:visible; animation:cardIn .35s cubic-bezier(.22,1,.36,1) backwards; transition:box-shadow .2s, transform .2s;}
+  .stub:hover{box-shadow:0 14px 26px -14px rgba(28,26,23,.3); transform:translateY(-2px);}
+  .stub::before, .stub::after{content:""; position:absolute; top:50%; transform:translateY(-50%); width:18px; height:18px; background:var(--paper); border-radius:50%; border:1px solid var(--line); z-index:2;}
+  .stub::before{left:-9px;} .stub::after{right:-9px;}
+  .stub-token{width:88px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:14px 8px; border-right:2px dashed var(--line); position:relative; background:linear-gradient(180deg,rgba(199,124,31,.05),transparent);}
+  .stub-token-num{font-family:'JetBrains Mono'; font-weight:700; font-size:20px;}
+  .stub-token-time{font-size:10px; color:var(--ink-faint); margin-top:4px;}
+  .stub-body{flex:1; padding:14px 16px;}
+  .stub-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;}
+  .stub-status{font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:.02em;}
+  .stub-status.paid{background:linear-gradient(135deg,#E4F3EE,var(--teal-soft)); color:var(--teal);}
+  .stub-status.cash{background:linear-gradient(135deg,#FBEFD2,var(--amber-soft)); color:var(--amber);}
+  .stub-status.group{background:linear-gradient(135deg,#F8E9CC,var(--saffron-soft)); color:var(--saffron);}
+  .stub-items{font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin-bottom:10px;}
+  .stub-amt{font-family:'JetBrains Mono'; font-weight:700; font-size:15px;}
+  .stub-actions{display:flex; gap:8px; margin-top:10px;}
+  .stub-btn{flex:1; text-align:center; padding:8px; border-radius:7px; font-size:11.5px; font-weight:700; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink); transition:.15s;}
+  .stub-btn.primary{background:linear-gradient(135deg,#2B2823,var(--ink)); color:#fff; border-color:var(--ink); box-shadow:0 4px 10px -6px rgba(28,26,23,.4);}
+  .stub-btn.primary:hover{filter:brightness(1.2);}
+  .stub-btn:not(.primary):hover{border-color:var(--ink-faint); transform:translateY(-1px);}
+  .stub-btn[disabled]{opacity:.45; cursor:default;}
+  .stub{transition:opacity .3s, transform .3s, box-shadow .2s;}
+  .stub.collected{opacity:0; transform:scale(.96); pointer-events:none;}
+  .kq-card{transition:opacity .3s, transform .3s, box-shadow .2s;}
+  .kq-card:hover{transform:translateY(-2px); box-shadow:0 16px 30px -16px rgba(0,0,0,.5);}
+  .kq-card.cleared{opacity:0; transform:scale(.9); pointer-events:none;}
+  .kq-btn{transition:.15s;}
+  .kq-btn:hover{background:#e6a24a; transform:translateY(-1px);}
+  .item-btn{transition:.15s;}
+  .item-btn:hover{border-color:var(--saffron); transform:translateY(-1px); box-shadow:0 8px 18px -12px rgba(199,124,31,.4);}
+  .item-btn.picked{border-color:var(--saffron); background:linear-gradient(160deg,#FFF9EF,#FFF1DC);}
+  .toggle{transition:background .2s;}
+  .toggle::after{transition:left .2s, right .2s;}
+
+  .section-label{font-family:'Space Grotesk'; font-weight:600; font-size:13.5px; color:var(--ink-soft); margin:22px 0 12px; text-transform:uppercase; letter-spacing:.03em;}
+
+  /* Kitchen queue */
+  .kq-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  .kq-card{background:linear-gradient(160deg,#2B2823,var(--ink)); color:#fff; border-radius:12px; padding:20px; text-align:center; box-shadow:0 10px 22px -14px rgba(0,0,0,.5);}
+  .kq-num{font-family:'JetBrains Mono'; font-size:38px; font-weight:700; background:linear-gradient(135deg,#F0AC58,var(--saffron)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .kq-wait{font-size:11px; color:#A79E8D; margin:6px 0 14px;}
+  .kq-btn{background:linear-gradient(135deg,#E0A758,var(--saffron)); color:var(--ink); border:none; padding:9px; border-radius:7px; font-weight:700; font-size:12px; width:100%; cursor:pointer;}
+
+  /* Cash management */
+  .cash-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px;}
+  .cash-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px; text-align:center; position:relative; overflow:hidden; box-shadow:0 1px 2px rgba(28,26,23,.03); transition:transform .18s, box-shadow .18s;}
+  .cash-card::before{content:""; position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg,var(--teal),#3EA98C);}
+  .cash-card:hover{transform:translateY(-2px); box-shadow:0 14px 26px -16px rgba(28,26,23,.3);}
+  .cash-card .kpi-value{font-size:26px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); font-weight:600; padding:0 14px 10px; border-bottom:1px solid var(--line);}
+  td{padding:12px 14px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tbody tr{transition:background .15s;}
+  tbody tr:hover{background:rgba(199,124,31,.04);}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:0 1px 2px rgba(28,26,23,.03);}
+  .panel-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
+  .panel-title{font-family:'Space Grotesk'; font-weight:600; font-size:15px;}
+  .pill{display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;}
+  .pill.paid{background:linear-gradient(135deg,#E4F3EE,var(--teal-soft)); color:var(--teal);}
+  .pill.wait{background:linear-gradient(135deg,#FBEFD2,var(--amber-soft)); color:var(--amber);}
+
+  /* Manual entry */
+  .item-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  .item-btn{background:var(--panel); border:1.5px solid var(--line); border-radius:10px; padding:16px 10px; text-align:center; cursor:pointer;}
+  .item-btn .nm{font-weight:600; font-size:13px;}
+  .item-btn .pr{font-family:'JetBrains Mono'; color:var(--saffron); font-weight:700; margin-top:4px; font-size:13px;}
+  .cart-bar{position:sticky; bottom:0; background:linear-gradient(135deg,#2B2823,var(--ink)); color:#fff; padding:16px 22px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; box-shadow:0 16px 32px -14px rgba(0,0,0,.5);}
+  .cart-bar .amt{font-family:'JetBrains Mono'; font-size:18px; font-weight:700; color:var(--saffron);}
+
+  /* Menu manager */
+  .menu-row{display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--line-soft); transition:background .15s;}
+  .menu-row:hover{background:rgba(199,124,31,.03);}
+  .menu-thumb{width:46px; height:46px; border-radius:8px; background:linear-gradient(160deg,var(--deep),#E3DAC5); flex-shrink:0;}
+  .toggle{width:38px; height:22px; border-radius:20px; background:linear-gradient(135deg,#2C8A73,var(--teal)); position:relative; cursor:pointer; box-shadow:inset 0 1px 2px rgba(0,0,0,.15);}
+  .toggle::after{content:""; width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; right:2px; box-shadow:0 2px 4px rgba(0,0,0,.25);}
+  .toggle.off{background:var(--line);}
+  .toggle.off::after{right:auto; left:2px;}
+
+  .chart{display:flex; align-items:flex-end; gap:10px; height:140px; padding-top:10px;}
+  .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end;}
+  .bar{width:100%; border-radius:4px 4px 0 0; background:linear-gradient(180deg, var(--saffron), #A9660F); transform-origin:bottom; animation:barGrow .6s cubic-bezier(.22,1,.36,1) backwards;}
+  .bar-label{font-size:10.5px; color:var(--ink-faint);}
+  .grid-2{display:grid; grid-template-columns:1.4fr 1fr; gap:16px;}
+
+  .kpi:nth-child(1){animation-delay:0ms;} .kpi:nth-child(2){animation-delay:40ms;} .kpi:nth-child(3){animation-delay:80ms;} .kpi:nth-child(4){animation-delay:120ms;}
+  .stub-grid .stub:nth-child(1){animation-delay:0ms;} .stub-grid .stub:nth-child(2){animation-delay:40ms;} .stub-grid .stub:nth-child(3){animation-delay:80ms;} .stub-grid .stub:nth-child(4){animation-delay:120ms;} .stub-grid .stub:nth-child(5){animation-delay:160ms;} .stub-grid .stub:nth-child(6){animation-delay:200ms;}
+  .bar-col:nth-child(1) .bar{animation-delay:0ms;} .bar-col:nth-child(2) .bar{animation-delay:50ms;} .bar-col:nth-child(3) .bar{animation-delay:100ms;} .bar-col:nth-child(4) .bar{animation-delay:150ms;} .bar-col:nth-child(5) .bar{animation-delay:200ms;} .bar-col:nth-child(6) .bar{animation-delay:250ms;} .bar-col:nth-child(7) .bar{animation-delay:300ms;}
+
+  /* Empty states */
+  .empty-state{padding:56px 20px; text-align:center; color:var(--ink-soft); background:var(--panel); border:1px dashed var(--line); border-radius:var(--radius); animation:cardIn .3s ease;}
+  .empty-state svg{margin-bottom:12px; opacity:.85;}
+  .empty-state .t{font-weight:700; font-size:14px; color:var(--ink);}
+  .empty-state .d{font-size:12.5px; margin-top:4px; color:var(--ink-faint);}
+
+  /* Toast */
+  #toast-wrap{position:fixed; bottom:22px; right:22px; display:flex; flex-direction:column; gap:8px; z-index:100;}
+  .toast{background:var(--ink); color:#fff; padding:11px 16px; border-radius:9px; font-size:12.5px; font-weight:600; box-shadow:0 10px 24px -8px rgba(0,0,0,.35); display:flex; align-items:center; gap:8px; animation:toastIn .2s ease;}
+  .toast .dot{width:7px; height:7px; border-radius:50%; background:var(--teal); flex-shrink:0;}
+  @keyframes toastIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+
+  .item-btn[aria-pressed="true"]{border-color:var(--saffron); background:#FFF6E9;}
+  .cart-bar.disabled{opacity:.5;}
+  .cart-bar button{background:none; border:none; color:inherit; font:inherit; cursor:pointer;}
+  .menu-row .toggle{cursor:pointer;}
+  input[type="search"]:focus,input[type="text"]:focus{outline:2px solid var(--saffron); outline-offset:1px;}
+  *:focus-visible{outline:2px solid var(--saffron); outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">Q</div>
+      <div><div class="brand-name">QRToken.in</div><div class="brand-sub">Owner Dashboard</div></div>
+    </div>
+
+    <div class="nav-group-label">Today</div>
+    <div class="nav-item active" data-view="live"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Live Orders <span class="nav-badge" style="margin-left:auto;background:linear-gradient(135deg,#E0A758,var(--saffron));color:#1C1A17;font-size:10px;padding:1px 7px;border-radius:10px; font-weight:700;">6</span></div>
+    <div class="nav-item" data-view="kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V8l8-5 8 5v13M4 21h16M9 21v-6h6v6"/></svg>Kitchen Queue</div>
+    <div class="nav-item" data-view="manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Manual Entry</div>
+    <div class="nav-item" data-view="tables"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="10" width="18" height="4"/><path d="M6 14v4M18 14v4M4 10V7a2 2 0 012-2h12a2 2 0 012 2v3"/></svg>Table Sessions</div>
+
+    <div class="nav-group-label">Money</div>
+    <div class="nav-item" data-view="cash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Cash Management</div>
+    <div class="nav-item" data-view="recon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-9-9 9 9 0 019 9z"/></svg>Cash Reconciliation</div>
+    <div class="nav-item" data-view="refunds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l-4-4 4-4M5 10h11a4 4 0 010 8h-1"/></svg>Refunds</div>
+
+    <div class="nav-group-label">Shop</div>
+    <div class="nav-item" data-view="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Menu Manager</div>
+    <div class="nav-item" data-view="coupons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10l3 5-3 5H7l-3-5z"/><circle cx="12" cy="12" r="1.5"/></svg>Coupons</div>
+    <div class="nav-item" data-view="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M8 17V10M13 17V6M18 17v-4"/></svg>Analytics</div>
+    <div class="nav-item" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</div>
+
+    <div class="sidebar-foot">
+      <div class="admin-chip"><div class="avatar">SK</div><div><div class="admin-chip-name">Shree Krishna Tea Stall</div><div class="admin-chip-role">Rajkot · Free plan</div></div></div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- LIVE ORDERS -->
+    <div class="view active" id="live">
+      <div class="topbar">
+        <div><div class="page-title">Live Orders</div><div class="page-sub">Saturday, 18 July · Updating in real time</div></div>
+        <div class="topbar-actions"><button class="btn" id="sound-toggle">🔊 Sound on</button><button class="btn btn-primary" data-view="manual">+ Manual order</button></div>
+      </div>
+      <div class="kpi-strip">
+        <div class="kpi"><div class="kpi-label">Orders today</div><div class="kpi-value">142</div><div class="kpi-sub">↑ 18% vs yesterday</div></div>
+        <div class="kpi"><div class="kpi-label">Revenue today</div><div class="kpi-value">₹4,820</div><div class="kpi-sub">Digital ₹3,180 · Cash ₹1,640</div></div>
+        <div class="kpi"><div class="kpi-label">Avg wait time</div><div class="kpi-value">3.4 min</div><div class="kpi-sub">Token to Ready</div></div>
+        <div class="kpi"><div class="kpi-label">Pending collection</div><div class="kpi-value">₹340</div><div class="kpi-sub">4 orders awaiting cash</div></div>
+      </div>
+
+      <div class="section-label">Active now <span id="active-count" class="mono" style="text-transform:none; letter-spacing:0; color:var(--ink-faint); font-weight:500;">· 6 orders</span></div>
+      <div class="stub-grid" id="stub-grid">
+        <div class="stub" id="stub-A023">
+          <div class="stub-token"><div class="stub-token-num">A-023</div><div class="stub-token-time">3 min ago</div></div>
+          <div class="stub-body">
+            <div class="stub-head"><span class="stub-status paid">PAID ✓ digital</span></div>
+            <div class="stub-items">Tea ×2, Samosa ×1</div>
+            <div class="stub-amt">₹35</div>
+            <div class="stub-actions"><button class="stub-btn primary" data-next="A023">Mark Ready</button></div>
+          </div>
+        </div>
+        <div class="stub" id="stub-A024">
+          <div class="stub-token"><div class="stub-token-num">A-024</div><div class="stub-token-time">2 min ago</div></div>
+          <div class="stub-body">
+            <div class="stub-head"><span class="stub-status cash">CASH ₹24 pending</span></div>
+            <div class="stub-items">Cutting Chai ×3</div>
+            <div class="stub-amt">₹24</div>
+            <div class="stub-actions"><button class="stub-btn" data-next="A024">Mark Ready</button><button class="stub-btn primary" data-collect="A024">Collect</button></div>
+          </div>
+        </div>
+        <div class="stub" id="stub-B12">
+          <div class="stub-token"><div class="stub-token-num">B-12</div><div class="stub-token-time">Table 5</div></div>
+          <div class="stub-body">
+            <div class="stub-head"><span class="stub-status group">GROUP · 3 slots</span></div>
+            <div class="stub-items">A ₹210 paid · B ₹220 paid · C ₹55 cash pending</div>
+            <div class="stub-amt">₹485</div>
+            <div class="stub-actions"><button class="stub-btn primary" data-view="tables">View session</button></div>
+          </div>
+        </div>
+        <div class="stub" id="stub-A025">
+          <div class="stub-token"><div class="stub-token-num">A-025</div><div class="stub-token-time">Just now</div></div>
+          <div class="stub-body">
+            <div class="stub-head"><span class="stub-status paid">PAID ✓ digital</span></div>
+            <div class="stub-items">Biryani ×1, Lassi ×1</div>
+            <div class="stub-amt">₹180</div>
+            <div class="stub-actions"><button class="stub-btn primary" data-next="A025">Mark Preparing</button></div>
+          </div>
+        </div>
+        <div class="stub" id="stub-A026">
+          <div class="stub-token"><div class="stub-token-num">A-026</div><div class="stub-token-time">Just now</div></div>
+          <div class="stub-body">
+            <div class="stub-head"><span class="stub-status cash">CASH ₹35 pending</span></div>
+            <div class="stub-items">Tea ×2, Samosa ×1</div>
+            <div class="stub-amt">₹35</div>
+            <div class="stub-actions"><button class="stub-btn" data-next="A026">Mark Ready</button><button class="stub-btn primary" data-collect="A026">Collect</button></div>
+          </div>
+        </div>
+        <div class="stub" id="stub-A022">
+          <div class="stub-token"><div class="stub-token-num">A-022</div><div class="stub-token-time">6 min ago</div></div>
+          <div class="stub-body">
+            <div class="stub-head"><span class="stub-status paid">PAID ✓ digital</span></div>
+            <div class="stub-items">Bun Maska ×2</div>
+            <div class="stub-amt">₹16</div>
+            <div class="stub-actions"><button class="stub-btn primary" data-collect="A022">Mark Collected</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="empty-state" id="live-empty" style="display:none; margin-top:4px;">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="30" fill="url(#le1)"/>
+          <path d="M20 26h24M20 26c0 10 4 18 12 18s12-8 12-18" stroke="#C77C1F" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M44 26c2 0 5 1 5 5s-3 5-5 5" stroke="#C77C1F" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M26 18c0-2 1-4 2-5M32 18c0-2 1-4 2-5M38 18c0-2 1-4 2-5" stroke="#E0A758" stroke-width="2" stroke-linecap="round"/>
+          <defs><radialGradient id="le1" cx="0" cy="0" r="1" gradientTransform="translate(32 32) rotate(90) scale(30)"><stop stop-color="#F3E2C4"/><stop offset="1" stop-color="#F3E2C4" stop-opacity=".3"/></radialGradient></defs>
+        </svg>
+        <div class="t">All caught up</div>
+        <div class="d">No active orders right now — new tokens will appear here instantly.</div>
+      </div>
+    </div>
+
+    <!-- KITCHEN QUEUE -->
+    <div class="view" id="kitchen">
+      <div class="topbar"><div><div class="page-title">Kitchen Queue</div><div class="page-sub">Large-font view — mount on a kitchen tablet</div></div></div>
+      <div class="kq-grid" id="kq-grid">
+        <div class="kq-card" id="kq-A023"><div class="kq-num">A-023</div><div class="kq-wait">Waiting 3 min</div><button class="kq-btn" data-kq="A023">MARK READY</button></div>
+        <div class="kq-card" id="kq-A024"><div class="kq-num">A-024</div><div class="kq-wait">Waiting 2 min</div><button class="kq-btn" data-kq="A024">MARK READY</button></div>
+        <div class="kq-card" id="kq-A025"><div class="kq-num">A-025</div><div class="kq-wait">Just placed</div><button class="kq-btn" data-kq="A025">MARK READY</button></div>
+        <div class="kq-card" id="kq-A026"><div class="kq-num">A-026</div><div class="kq-wait">Just placed</div><button class="kq-btn" data-kq="A026">MARK READY</button></div>
+      </div>
+      <div class="empty-state" id="kq-empty" style="display:none; margin-top:14px;">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="30" fill="url(#kqe1)"/>
+          <path d="M20 33l8 8 16-16" stroke="#1F6E5C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><radialGradient id="kqe1" cx="0" cy="0" r="1" gradientTransform="translate(32 32) rotate(90) scale(30)"><stop stop-color="#DCEDE7"/><stop offset="1" stop-color="#DCEDE7" stop-opacity=".3"/></radialGradient></defs>
+        </svg>
+        <div class="t">Queue is clear</div>
+        <div class="d">New tokens will appear here the moment they're paid for.</div>
+      </div>
+    </div>
+
+    <!-- MANUAL ENTRY -->
+    <div class="view" id="manual">
+      <div class="topbar"><div><div class="page-title">Manual Entry</div><div class="page-sub">For walk-up customers — under 15 seconds per order</div></div></div>
+      <div class="item-grid" id="manual-grid">
+        <div class="item-btn" data-id="tea" data-price="10" role="button" tabindex="0" aria-pressed="false"><div class="nm">Tea</div><div class="pr">₹10</div></div>
+        <div class="item-btn" data-id="cutting" data-price="8" role="button" tabindex="0" aria-pressed="false"><div class="nm">Cutting Chai</div><div class="pr">₹8</div></div>
+        <div class="item-btn" data-id="samosa" data-price="15" role="button" tabindex="0" aria-pressed="false"><div class="nm">Samosa</div><div class="pr">₹15</div></div>
+        <div class="item-btn" data-id="bun" data-price="8" role="button" tabindex="0" aria-pressed="false"><div class="nm">Bun Maska</div><div class="pr">₹8</div></div>
+        <div class="item-btn" data-id="vadapav" data-price="20" role="button" tabindex="0" aria-pressed="false"><div class="nm">Vada Pav</div><div class="pr">₹20</div></div>
+        <div class="item-btn" data-id="biscuit" data-price="12" role="button" tabindex="0" aria-pressed="false"><div class="nm">Biscuit Plate</div><div class="pr">₹12</div></div>
+        <div class="item-btn" data-id="coffee" data-price="15" role="button" tabindex="0" aria-pressed="false"><div class="nm">Coffee</div><div class="pr">₹15</div></div>
+        <div class="item-btn" data-id="lassi" data-price="30" role="button" tabindex="0" aria-pressed="false"><div class="nm">Lassi</div><div class="pr">₹30</div></div>
+      </div>
+      <div class="cart-bar disabled" id="manual-cart-bar"><span id="manual-cart-summary">Tap items to build the order</span><button id="manual-confirm" disabled>Confirm Cash Order — <span class="amt" id="manual-cart-amt">₹0</span></button></div>
+    </div>
+
+    <!-- TABLE SESSIONS -->
+    <div class="view" id="tables">
+      <div class="topbar"><div><div class="page-title">Table Sessions</div><div class="page-sub">Group ordering — slot-by-slot payment status</div></div></div>
+      <div class="panel" style="padding:0;">
+        <table>
+          <thead><tr><th>Table</th><th>Slots</th><th>Total</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Table 5</td><td>A ₹210 paid, B ₹220 paid, C ₹55 pending</td><td class="mono">₹485</td><td><span class="pill wait">1 slot pending</span></td><td class="panel-link">View →</td></tr>
+            <tr><td>Table 2</td><td>A ₹340 paid, B ₹280 paid</td><td class="mono">₹620</td><td><span class="pill paid">Fully paid</span></td><td class="panel-link">Close →</td></tr>
+            <tr><td>Table 8</td><td>A ₹150 cash pending</td><td class="mono">₹150</td><td><span class="pill wait">Awaiting cash</span></td><td class="panel-link">View →</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CASH MANAGEMENT -->
+    <div class="view" id="cash">
+      <div class="topbar"><div><div class="page-title">Cash Management</div><div class="page-sub">Today's cash — placed, collected, pending</div></div></div>
+      <div class="cash-grid">
+        <div class="cash-card"><div class="kpi-label">Cash orders placed</div><div class="kpi-value">₹1,980</div></div>
+        <div class="cash-card"><div class="kpi-label">Cash collected</div><div class="kpi-value" style="color:var(--teal)">₹1,640</div></div>
+        <div class="cash-card"><div class="kpi-label">Pending collection</div><div class="kpi-value" style="color:var(--amber)">₹340</div></div>
+      </div>
+      <div class="panel" style="padding:0;">
+        <table>
+          <thead><tr><th>Token</th><th>Items</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+          <tbody id="cash-rows">
+            <tr id="cash-A024"><td class="mono">A-024</td><td>Cutting Chai ×3</td><td class="mono">₹24</td><td><span class="pill wait">Pending</span></td><td class="panel-link" data-collect-row="A024">Mark collected</td></tr>
+            <tr id="cash-A026"><td class="mono">A-026</td><td>Tea ×2, Samosa ×1</td><td class="mono">₹35</td><td><span class="pill wait">Pending</span></td><td class="panel-link" data-collect-row="A026">Mark collected</td></tr>
+            <tr id="cash-A021"><td class="mono">A-021</td><td>Vada Pav ×2</td><td class="mono">₹40</td><td><span class="pill paid">Collected</span></td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CASH RECONCILIATION -->
+    <div class="view" id="recon">
+      <div class="topbar"><div><div class="page-title">Cash Reconciliation</div><div class="page-sub">End of day — verify expected vs physical cash</div></div><div class="topbar-actions"><button class="btn">Download report</button></div></div>
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line-soft);"><span>Digital payments (Razorpay)</span><span class="mono">₹1,240</span></div>
+        <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line-soft);"><span>App cash collected</span><span class="mono">₹960</span></div>
+        <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line-soft);"><span>Manual cash orders</span><span class="mono">₹420</span></div>
+        <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line-soft); font-weight:700;"><span>Expected cash in drawer</span><span class="mono">₹1,380</span></div>
+        <div style="display:flex; justify-content:space-between; padding:12px 0; font-weight:700; color:var(--teal);"><span>Discrepancy</span><span class="mono">₹0 ✓</span></div>
+      </div>
+    </div>
+
+    <!-- REFUNDS -->
+    <div class="view" id="refunds">
+      <div class="topbar"><div><div class="page-title">Refunds</div><div class="page-sub">Digital order refunds — full or partial</div></div></div>
+      <div class="panel" style="padding:0;">
+        <table>
+          <thead><tr><th>Token</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">A-019</td><td class="mono">₹180</td><td>Item unavailable</td><td><span class="pill paid">Processed</span></td></tr>
+            <tr><td class="mono">A-015</td><td class="mono">₹35</td><td>Order cancelled by customer</td><td><span class="pill wait">Pending</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MENU MANAGER -->
+    <div class="view" id="menu">
+      <div class="topbar"><div><div class="page-title">Menu Manager</div><div class="page-sub">32 items · 3 categories</div></div><div class="topbar-actions"><button class="btn btn-primary">+ Add item</button></div></div>
+      <div class="panel">
+        <div class="menu-row"><div class="menu-thumb"></div><div style="flex:1;"><div class="lr-name" style="font-weight:600;">Tea</div><div style="font-size:11.5px;color:var(--ink-soft);">Hot Beverages</div></div><div class="mono">₹10</div><div class="toggle" data-toggle-item="tea" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle Tea availability"></div></div>
+        <div class="menu-row"><div class="menu-thumb"></div><div style="flex:1;"><div class="lr-name" style="font-weight:600;">Cutting Chai</div><div style="font-size:11.5px;color:var(--ink-soft);">Hot Beverages</div></div><div class="mono">₹8</div><div class="toggle" data-toggle-item="cutting" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle Cutting Chai availability"></div></div>
+        <div class="menu-row"><div class="menu-thumb"></div><div style="flex:1;"><div class="lr-name" style="font-weight:600;">Samosa</div><div style="font-size:11.5px;color:var(--ink-soft);">Snacks</div></div><div class="mono">₹15</div><div class="toggle" data-toggle-item="samosa" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle Samosa availability"></div></div>
+        <div class="menu-row"><div class="menu-thumb"></div><div style="flex:1;"><div class="lr-name" style="font-weight:600;" id="vadapav-label">Vada Pav</div><div style="font-size:11.5px;color:var(--ink-soft);" id="vadapav-sub">Snacks — sold out today</div></div><div class="mono">₹20</div><div class="toggle off" data-toggle-item="vadapav" role="switch" aria-checked="false" tabindex="0" aria-label="Toggle Vada Pav availability"></div></div>
+      </div>
+    </div>
+
+    <!-- COUPONS -->
+    <div class="view" id="coupons">
+      <div class="topbar"><div><div class="page-title">Coupons</div><div class="page-sub">Active discount codes</div></div><div class="topbar-actions"><button class="btn btn-primary">+ Create coupon</button></div></div>
+      <div class="panel" style="padding:0;">
+        <table>
+          <thead><tr><th>Code</th><th>Discount</th><th>Used</th><th>Expires</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">FIRST10</td><td>10% off</td><td>84 / 200</td><td>31 Jul 2026</td><td><span class="pill paid">Active</span></td></tr>
+            <tr><td class="mono">WEEKEND5</td><td>₹5 flat off</td><td>212 / ∞</td><td>Ongoing</td><td><span class="pill paid">Active</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="view" id="analytics">
+      <div class="topbar"><div><div class="page-title">Analytics</div><div class="page-sub">Last 7 days</div></div><div class="topbar-actions"><button class="btn">Export CSV</button></div></div>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Revenue — last 7 days</div></div>
+          <div class="chart">
+            <div class="bar-col"><div class="bar" style="height:52%"></div><div class="bar-label">Sun</div></div>
+            <div class="bar-col"><div class="bar" style="height:61%"></div><div class="bar-label">Mon</div></div>
+            <div class="bar-col"><div class="bar" style="height:47%"></div><div class="bar-label">Tue</div></div>
+            <div class="bar-col"><div class="bar" style="height:58%"></div><div class="bar-label">Wed</div></div>
+            <div class="bar-col"><div class="bar" style="height:66%"></div><div class="bar-label">Thu</div></div>
+            <div class="bar-col"><div class="bar" style="height:74%"></div><div class="bar-label">Fri</div></div>
+            <div class="bar-col"><div class="bar" style="height:100%; background:linear-gradient(180deg,#1F6E5C,#154A3E);"></div><div class="bar-label">Sat</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Top items</div></div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0;"><span>Tea</span><span class="mono">412 orders</span></div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0;"><span>Samosa</span><span class="mono">286 orders</span></div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0;"><span>Cutting Chai</span><span class="mono">240 orders</span></div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0;"><span>Vada Pav</span><span class="mono">118 orders</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="view" id="settings">
+      <div class="topbar"><div><div class="page-title">Settings</div><div class="page-sub">Shop profile and payment configuration</div></div></div>
+      <div class="panel">
+        <div class="menu-row"><div style="flex:1;">Shop name</div><div class="mono">Shree Krishna Tea Stall</div></div>
+        <div class="menu-row"><div style="flex:1;">Payment mode</div><div class="mono">Digital + Cash (Hybrid)</div></div>
+        <div class="menu-row"><div style="flex:1;">Razorpay link</div><div class="mono">Connected ✓</div></div>
+        <div class="menu-row"><div style="flex:1;">Plan</div><div class="mono">Free</div></div>
+        <div class="menu-row"><div style="flex:1;">QR code</div><div class="mono">Download →</div></div>
+      </div>
+    </div>
+
+  </main>
+  <div id="toast-wrap" aria-live="polite"></div>
+</div>
+
+<script>
+  // ---------- Toast ----------
+  function toast(msg){
+    const wrap = document.getElementById('toast-wrap');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<span class="dot"></span>${msg}`;
+    wrap.appendChild(t);
+    setTimeout(()=>{ t.style.transition='opacity .25s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 260); }, 2400);
+  }
+
+  // ---------- Nav / view switching ----------
+  function goView(name){
+    document.querySelectorAll('.nav-item').forEach(i=> i.classList.toggle('active', i.dataset.view===name));
+    document.querySelectorAll('.view').forEach(v=> v.classList.toggle('active', v.id===name));
+  }
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.addEventListener('click', ()=> goView(item.dataset.view));
+  });
+  document.addEventListener('click', e=>{
+    const v = e.target.closest('[data-view]');
+    if(v && !v.classList.contains('nav-item')) goView(v.dataset.view);
+  });
+  const soundBtn = document.getElementById('sound-toggle');
+  if(soundBtn) soundBtn.addEventListener('click', ()=>{
+    const on = soundBtn.textContent.includes('on');
+    soundBtn.textContent = on ? '🔇 Sound off' : '🔊 Sound on';
+    toast(on ? 'New-order sound muted' : 'New-order sound enabled');
+  });
+
+  // ---------- Live Orders ----------
+  const NEXT_LABEL = {'Mark Preparing':'Mark Ready','Mark Ready':'Mark Collected'};
+  function updateActiveCount(){
+    const remaining = document.querySelectorAll('#stub-grid .stub:not(.collected)').length;
+    const label = document.getElementById('active-count');
+    if(label) label.textContent = `· ${remaining} order${remaining===1?'':'s'}`;
+    const badge = document.querySelector('.nav-item[data-view="live"] span');
+    if(badge) badge.textContent = remaining;
+    document.getElementById('live-empty').style.display = remaining===0 ? 'block' : 'none';
+    document.getElementById('stub-grid').style.display = remaining===0 ? 'none' : 'grid';
+  }
+
+  document.getElementById('stub-grid').addEventListener('click', e=>{
+    const viewBtn = e.target.closest('[data-view]');
+    if(viewBtn){ goView(viewBtn.dataset.view); return; }
+
+    const nextBtn = e.target.closest('[data-next]');
+    if(nextBtn){
+      const token = nextBtn.dataset.next;
+      const label = nextBtn.textContent.trim();
+      if(label === 'Mark Collected'){
+        const stub = document.getElementById('stub-'+token);
+        stub.classList.add('collected');
+        toast(`Token ${token.replace(/^([A-Z]+)(\d+)/,'$1-$2')} collected`);
+        setTimeout(updateActiveCount, 320);
+      } else {
+        nextBtn.textContent = NEXT_LABEL[label] || 'Mark Collected';
+        toast(`Token ${token.replace(/^([A-Z]+)(\d+)/,'$1-$2')} → ${nextBtn.textContent}`);
+      }
+      return;
+    }
+
+    const collectBtn = e.target.closest('[data-collect]');
+    if(collectBtn){
+      const token = collectBtn.dataset.collect;
+      const stub = document.getElementById('stub-'+token);
+      const status = stub.querySelector('.stub-status');
+      if(status && status.classList.contains('cash')){
+        status.textContent = 'PAID ✓ cash';
+        status.classList.remove('cash'); status.classList.add('paid');
+        collectBtn.remove();
+        toast(`Cash collected for ${token.replace(/^([A-Z]+)(\d+)/,'$1-$2')}`);
+      } else {
+        stub.classList.add('collected');
+        toast(`Token ${token.replace(/^([A-Z]+)(\d+)/,'$1-$2')} collected`);
+        setTimeout(updateActiveCount, 320);
+      }
+    }
+  });
+
+  // ---------- Kitchen Queue ----------
+  document.getElementById('kq-grid').addEventListener('click', e=>{
+    const btn = e.target.closest('[data-kq]');
+    if(!btn) return;
+    const card = document.getElementById('kq-'+btn.dataset.kq);
+    card.classList.add('cleared');
+    toast(`${btn.dataset.kq.replace(/^([A-Z]+)(\d+)/,'$1-$2')} marked ready — customer notified`);
+    setTimeout(()=>{
+      card.remove();
+      const remaining = document.querySelectorAll('#kq-grid .kq-card').length;
+      document.getElementById('kq-empty').style.display = remaining===0 ? 'block' : 'none';
+    }, 320);
+  });
+
+  // ---------- Manual Entry ----------
+  const manualCart = {};
+  const manualPrices = {};
+  document.querySelectorAll('#manual-grid .item-btn').forEach(btn=>{
+    manualPrices[btn.dataset.id] = +btn.dataset.price;
+  });
+  function renderManualCart(){
+    const entries = Object.entries(manualCart).filter(([,q])=>q>0);
+    const summary = document.getElementById('manual-cart-summary');
+    const amt = document.getElementById('manual-cart-amt');
+    const bar = document.getElementById('manual-cart-bar');
+    const confirmBtn = document.getElementById('manual-confirm');
+    const total = entries.reduce((s,[id,q])=> s + manualPrices[id]*q, 0);
+    amt.textContent = '₹'+total;
+    if(entries.length===0){
+      summary.textContent = 'Tap items to build the order';
+      bar.classList.add('disabled');
+      confirmBtn.disabled = true;
+      return;
+    }
+    bar.classList.remove('disabled');
+    confirmBtn.disabled = false;
+    summary.textContent = entries.map(([id,q])=>{
+      const name = document.querySelector(`#manual-grid [data-id="${id}"] .nm`).textContent;
+      return `${name} ×${q}`;
+    }).join(', ') + ` — ${entries.reduce((a,[,q])=>a+q,0)} items`;
+  }
+  function pickManualItem(id){
+    manualCart[id] = (manualCart[id]||0) + 1;
+    const btn = document.querySelector(`#manual-grid [data-id="${id}"]`);
+    btn.setAttribute('aria-pressed','true');
+    renderManualCart();
+  }
+  document.getElementById('manual-grid').addEventListener('click', e=>{
+    const btn = e.target.closest('.item-btn');
+    if(btn) pickManualItem(btn.dataset.id);
+  });
+  document.getElementById('manual-grid').addEventListener('keydown', e=>{
+    const btn = e.target.closest('.item-btn');
+    if(btn && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); pickManualItem(btn.dataset.id); }
+  });
+  document.getElementById('manual-confirm').addEventListener('click', ()=>{
+    if(document.getElementById('manual-confirm').disabled) return;
+    const count = Object.values(manualCart).reduce((a,b)=>a+b,0);
+    toast(`Cash order logged — ${count} item${count===1?'':'s'}, new token issued`);
+    Object.keys(manualCart).forEach(k=> delete manualCart[k]);
+    document.querySelectorAll('#manual-grid .item-btn').forEach(b=> b.setAttribute('aria-pressed','false'));
+    renderManualCart();
+  });
+
+  // ---------- Cash Management ----------
+  document.getElementById('cash-rows').addEventListener('click', e=>{
+    const link = e.target.closest('[data-collect-row]');
+    if(!link) return;
+    const row = link.closest('tr');
+    row.querySelector('.pill').textContent = 'Collected';
+    row.querySelector('.pill').classList.remove('wait'); row.querySelector('.pill').classList.add('paid');
+    link.textContent = '—';
+    link.removeAttribute('data-collect-row');
+    link.style.cursor = 'default'; link.style.color = 'var(--ink-faint)';
+    toast('Cash marked as collected');
+  });
+
+  // ---------- Menu Manager toggles ----------
+  function toggleMenuItem(el){
+    const isOn = !el.classList.contains('off');
+    el.classList.toggle('off', isOn);
+    el.setAttribute('aria-checked', String(!isOn));
+    const row = el.closest('.menu-row');
+    const name = row.querySelector('.lr-name').textContent.replace(/ — sold out today$/,'');
+    if(isOn){ toast(`${name} marked sold out`); }
+    else{ toast(`${name} is back in stock`); }
+  }
+  document.querySelectorAll('[data-toggle-item]').forEach(el=>{
+    el.addEventListener('click', ()=> toggleMenuItem(el));
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleMenuItem(el); } });
+  });
+
+  // ---------- Misc CTA feedback ----------
+  document.querySelectorAll('.btn-primary, .panel-link').forEach(el=>{
+    if(el.closest('#stub-grid') || el.closest('#cash-rows') || el.hasAttribute('data-view')) return;
+    el.addEventListener('click', ()=> toast(`"${el.textContent.trim()}" opens in the full app`));
+  });
+
+  // ---------- KPI count-up ----------
+  function animateKpiValue(el){
+    const raw = el.textContent;
+    const match = raw.match(/^([^\d]*)([\d,]+\.?\d*)(.*)$/);
+    if(!match) return;
+    const [, prefix, numStr, suffix] = match;
+    const target = parseFloat(numStr.replace(/,/g,''));
+    if(isNaN(target)) return;
+    const decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
+    const duration = 800;
+    const start = performance.now();
+    function tick(now){
+      const p = Math.min((now-start)/duration, 1);
+      const eased = 1 - Math.pow(1-p, 3);
+      const val = target*eased;
+      el.textContent = prefix + val.toLocaleString('en-IN', {minimumFractionDigits:decimals, maximumFractionDigits:decimals}) + suffix;
+      if(p<1) requestAnimationFrame(tick); else el.textContent = raw;
+    }
+    requestAnimationFrame(tick);
+  }
+  document.querySelectorAll('.kpi-value').forEach(animateKpiValue);
+
+  updateActiveCount();
+</script>
+</body>
+</html>

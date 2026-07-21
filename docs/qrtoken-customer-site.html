@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QRToken — Customer Ordering Experience</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#241B12; --ink-soft:#6B5D4B; --ink-faint:#7A6E5A;
+    --cream:#FBF6EC; --panel:#FFFFFF; --deep:#F1E6D2;
+    --line:#E9DCC3;
+    --saffron:#D98A2B; --saffron-deep:#B56E16;
+    --teal:#1F6E5C; --teal-soft:#DCEDE7;
+    --amber:#B8791F; --amber-soft:#F3E6C9;
+    --red:#B23B2E;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter',sans-serif; color:var(--ink);
+    background:
+      radial-gradient(680px 420px at 8% -6%, rgba(217,138,43,.14), transparent 60%),
+      radial-gradient(560px 380px at 96% 12%, rgba(31,110,92,.10), transparent 55%),
+      var(--cream);
+    background-attachment:fixed;
+  }
+  .disp{font-family:'Fraunces',serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit; border:none; background:none; cursor:pointer;}
+  *:focus-visible{outline:2px solid var(--saffron-deep); outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important;} }
+
+  .page-wrap{max-width:1180px; margin:0 auto; padding:44px 28px 80px;}
+  .intro{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:34px; gap:24px; flex-wrap:wrap;}
+  .eyebrow{font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--saffron-deep); font-weight:700; margin-bottom:8px;}
+  .intro h1{font-family:'Fraunces'; font-weight:600; font-size:32px; color:var(--ink);}
+  .intro p{color:var(--ink-soft); font-size:14.5px; margin-top:6px; max-width:520px;}
+  .mode-switch{display:flex; gap:6px; background:var(--deep); padding:5px; border-radius:12px;}
+  .mode-btn{padding:9px 18px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink-soft); transition:.18s;}
+  .mode-btn.active{background:linear-gradient(135deg,#3B2A16,var(--ink)); color:#fff; box-shadow:0 6px 14px -8px rgba(36,27,18,.5);}
+  .mode-btn:not(.active):hover{color:var(--ink);}
+
+  .stage{display:grid; grid-template-columns:380px 1fr; gap:40px; align-items:flex-start;}
+
+  .phone{width:380px; height:780px; background:linear-gradient(160deg,#332512,var(--ink)); border-radius:44px; padding:14px; box-shadow:0 40px 80px -24px rgba(36,27,18,.45), 0 12px 28px -14px rgba(217,138,43,.25), inset 0 1px 0 rgba(255,255,255,.06); position:sticky; top:40px;}
+  .phone-screen{width:100%; height:100%; background:var(--cream); border-radius:32px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow:inset 0 0 0 1px rgba(36,27,18,.06);}
+  .notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:120px; height:24px; background:var(--ink); border-radius:0 0 16px 16px; z-index:10;}
+
+  .screen{display:none; flex-direction:column; height:100%; overflow-y:auto; animation:fadeIn .3s cubic-bezier(.22,1,.36,1);}
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+  @keyframes itemIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+  @keyframes softPulse{0%,100%{box-shadow:0 0 0 5px #FFF0DA;} 50%{box-shadow:0 0 0 9px #FFE6C2;}}
+  @keyframes floaty{0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);}}
+
+  .shop-header{background:linear-gradient(160deg,#3B2A16,var(--ink)); color:#fff; padding:38px 20px 20px; position:relative; overflow:hidden;}
+  .shop-header::before{content:""; position:absolute; top:-60px; right:-40px; width:180px; height:180px; border-radius:50%; background:radial-gradient(circle, rgba(217,138,43,.35), transparent 70%); pointer-events:none;}
+  .shop-header::after{content:""; position:absolute; bottom:-70px; left:-30px; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle, rgba(31,110,92,.25), transparent 70%); pointer-events:none;}
+  .shop-name{font-family:'Fraunces'; font-weight:600; font-size:21px; position:relative;}
+  .shop-meta{font-size:11.5px; color:#D7C6A8; margin-top:4px; position:relative;}
+  .shop-badge{position:absolute; top:38px; right:20px; background:linear-gradient(135deg,#F0AC58,var(--saffron)); color:var(--ink); font-size:10px; font-weight:700; padding:4px 9px; border-radius:20px; box-shadow:0 4px 10px -2px rgba(181,110,22,.5); z-index:1;}
+
+  .cat-tabs{display:flex; gap:8px; padding:14px 16px 10px; overflow-x:auto; background:var(--cream); border-bottom:none; flex-shrink:0;}
+  .cat-tab{flex-shrink:0; padding:7px 15px; border-radius:20px; font-size:12px; font-weight:600; background:var(--deep); color:var(--ink-soft); transition:.18s;}
+  .cat-tab.on{background:linear-gradient(135deg,#F0AC58,var(--saffron-deep)); color:#fff; box-shadow:0 6px 14px -6px rgba(181,110,22,.55);}
+  .cat-tab:hover:not(.on){background:#E9DCC0; transform:translateY(-1px);}
+
+  .search-row{display:flex; align-items:center; gap:8px; margin:0 16px 10px; padding:9px 12px; background:#fff; border:1px solid var(--line); border-radius:10px; color:var(--ink-faint); flex-shrink:0;}
+  .search-row input{border:none; outline:none; font-size:12.5px; font-family:'Inter'; color:var(--ink); flex:1; background:none;}
+  .search-row input::placeholder{color:var(--ink-faint);}
+  .search-row:focus-within{border-color:var(--saffron);}
+
+  .menu-empty{padding:56px 24px; text-align:center; color:var(--ink-soft); animation:itemIn .3s ease;}
+  .menu-empty svg{margin-bottom:12px; opacity:.8;}
+  .menu-empty .t{font-weight:700; font-size:13.5px; color:var(--ink);}
+  .menu-empty .d{font-size:12px; margin-top:4px; color:var(--ink-faint);}
+  .menu-empty button{margin-top:14px; font-size:12px; font-weight:700; color:var(--saffron-deep); border:1.5px solid var(--saffron); padding:7px 14px; border-radius:8px; transition:.15s;}
+  .menu-empty button:hover{background:#FFF6E9; transform:translateY(-1px);}
+
+  .menu-list{padding:6px 16px 96px; flex:1; border-top:1px solid var(--line);}
+  .menu-item{display:flex; gap:12px; padding:13px 10px; margin:0 -10px; border-radius:12px; border-bottom:1px solid var(--line); align-items:center; animation:itemIn .35s cubic-bezier(.22,1,.36,1) backwards; transition:background .15s;}
+  .menu-item:hover{background:rgba(217,138,43,.06);}
+  .veg-dot{width:14px; height:14px; border:1.5px solid var(--teal); border-radius:3px; display:flex; align-items:center; justify-content:center; flex-shrink:0; align-self:flex-start; margin-top:3px;}
+  .veg-dot::after{content:""; width:6px; height:6px; background:var(--teal); border-radius:50%;}
+  .mi-body{flex:1; min-width:0;}
+  .mi-name{font-weight:600; font-size:13.5px;}
+  .mi-desc{font-size:11px; color:var(--ink-faint); margin-top:2px; line-height:1.4;}
+  .mi-price{font-family:'JetBrains Mono'; font-weight:700; font-size:13px; margin-top:6px;}
+
+  .stepper-zone{flex-shrink:0; width:74px; display:flex; justify-content:flex-end;}
+  .add-btn{border:1.5px solid var(--saffron); color:var(--saffron-deep); background:#fff; font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; transition:.15s; box-shadow:0 2px 6px -3px rgba(181,110,22,.3);}
+  .add-btn:hover{background:linear-gradient(135deg,#FFF6E9,#FFEBCC); transform:translateY(-1px); box-shadow:0 6px 14px -6px rgba(181,110,22,.45);}
+  .stepper{display:flex; align-items:center; gap:0; background:linear-gradient(135deg,#F0AC58,var(--saffron-deep)); border-radius:8px; overflow:hidden; box-shadow:0 4px 10px -4px rgba(181,110,22,.5); animation:itemIn .2s ease;}
+  .stepper button{color:#fff; font-weight:700; font-size:15px; width:26px; height:32px; display:flex; align-items:center; justify-content:center; transition:background .15s;}
+  .stepper button:hover{background:rgba(0,0,0,0.15);}
+  .stepper .qty{color:#fff; font-weight:700; font-size:13px; min-width:16px; text-align:center; font-family:'JetBrains Mono';}
+
+  .cart-fab{position:absolute; bottom:14px; left:14px; right:14px; background:linear-gradient(135deg,#3B2A16,var(--ink)); color:#fff; padding:13px 16px; border-radius:14px; display:flex; justify-content:space-between; align-items:center; transition:.25s cubic-bezier(.22,1,.36,1); box-shadow:0 16px 32px -12px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.05) inset;}
+  .cart-fab.hidden{transform:translateY(90px); opacity:0; pointer-events:none;}
+  .cart-fab .l{font-size:11.5px; color:#D7C6A8;}
+  .cart-fab .amt{font-family:'JetBrains Mono'; font-weight:700; font-size:15px;}
+  .cart-fab .go{background:linear-gradient(135deg,#F0AC58,var(--saffron-deep)); padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; color:#fff; transition:.15s;}
+  .cart-fab .go:hover{filter:brightness(1.08); transform:translateY(-1px);}
+
+  .co-head{padding:22px 18px 14px; border-bottom:1px solid var(--line); flex-shrink:0;}
+  .co-head .back{font-size:12px; color:var(--ink-soft); margin-bottom:8px; font-weight:600;}
+  .co-head .back:hover{color:var(--ink);}
+  .co-head h2{font-family:'Fraunces'; font-size:19px; font-weight:600;}
+  .cart-lines{flex-shrink:0;}
+  .cart-line{display:flex; justify-content:space-between; padding:11px 18px; font-size:13px; border-bottom:1px solid var(--line);}
+  .cart-line .nm{font-weight:600;}
+  .cart-line .qty{color:var(--ink-faint); font-size:11.5px;}
+  .co-empty{padding:40px 24px; text-align:center; color:var(--ink-soft); font-size:13px;}
+  .co-summary{padding:14px 18px; flex-shrink:0;}
+  .sum-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft); padding:5px 0;}
+  .sum-row.total{font-weight:700; color:var(--ink); font-size:15px; padding-top:10px; border-top:1px dashed var(--line); margin-top:6px;}
+  .pay-modes{padding:0 18px 18px; display:flex; gap:10px; flex-shrink:0;}
+  .pay-mode{flex:1; border:1.5px solid var(--line); border-radius:12px; padding:14px 10px; text-align:center; transition:.18s;}
+  .pay-mode.on{border-color:var(--saffron); background:linear-gradient(160deg,#FFF9EF,#FFF1DC); box-shadow:0 6px 16px -10px rgba(181,110,22,.4);}
+  .pay-mode:hover:not(.on){border-color:var(--ink-faint); transform:translateY(-1px);}
+  .pay-mode .ic{font-size:20px;}
+  .pay-mode .lb{font-size:12px; font-weight:700; margin-top:6px;}
+  .pay-mode .sub{font-size:10px; color:var(--ink-faint); margin-top:2px;}
+  .place-btn{margin:auto 18px 20px; background:linear-gradient(135deg,#C9781E,var(--saffron-deep)); color:#fff; text-align:center; padding:15px; border-radius:12px; font-weight:700; font-size:14px; transition:.18s; width:calc(100% - 36px); box-shadow:0 12px 24px -10px rgba(181,110,22,.5);}
+  .place-btn:hover{filter:brightness(1.06); transform:translateY(-1px); box-shadow:0 16px 30px -10px rgba(181,110,22,.6);}
+  .place-btn[disabled]{background:var(--line); color:var(--ink-faint); cursor:not-allowed; box-shadow:none; transform:none;}
+
+  .track-hero{background:linear-gradient(160deg,#3B2A16,var(--ink)); color:#fff; padding:32px 20px 26px; text-align:center; flex-shrink:0; position:relative; overflow:hidden;}
+  .track-hero::before{content:""; position:absolute; top:-80px; left:50%; transform:translateX(-50%); width:260px; height:260px; border-radius:50%; background:radial-gradient(circle, rgba(217,138,43,.3), transparent 65%); pointer-events:none;}
+  .track-hero .lb{font-size:11px; color:#D7C6A8; letter-spacing:.08em; text-transform:uppercase; position:relative;}
+  .track-token{font-family:'JetBrains Mono'; font-size:46px; font-weight:700; background:linear-gradient(135deg,#FFD79A,var(--saffron)); -webkit-background-clip:text; background-clip:text; color:transparent; margin-top:6px; position:relative; text-shadow:0 0 30px rgba(217,138,43,.35);}
+  .track-sub{font-size:12px; color:#D7C6A8; margin-top:6px; position:relative;}
+  .steps{padding:26px 24px 6px;}
+  .step{display:flex; gap:14px; padding-bottom:26px; position:relative;}
+  .step:not(:last-child)::before{content:""; position:absolute; left:11px; top:26px; width:2px; height:100%; background:var(--line); transition:background .4s;}
+  .step.done:not(:last-child)::before{background:linear-gradient(var(--teal),var(--teal));}
+  .step-dot{width:24px; height:24px; border-radius:50%; background:var(--deep); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; z-index:1; transition:.3s;}
+  .step.done .step-dot{background:linear-gradient(135deg,#2C8A73,var(--teal)); color:#fff; box-shadow:0 4px 10px -4px rgba(31,110,92,.5);}
+  .step.active .step-dot{background:linear-gradient(135deg,#F0AC58,var(--saffron)); color:#fff; animation:softPulse 1.8s ease-in-out infinite;}
+  .step-body .nm{font-weight:700; font-size:13.5px;}
+  .step-body .tm{font-size:11px; color:var(--ink-faint); margin-top:2px;}
+  .track-order{padding:0 24px 24px;}
+  .track-order-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; box-shadow:0 8px 20px -14px rgba(36,27,18,.3);}
+  .reorder-btn{margin:4px 24px 22px; border:1.5px solid var(--line); border-radius:10px; padding:11px; text-align:center; font-weight:700; font-size:12.5px; color:var(--ink-soft); transition:.15s;}
+  .reorder-btn:hover{border-color:var(--saffron); color:var(--saffron-deep); background:#FFF9EF; transform:translateY(-1px);}
+
+  .notes{padding-top:8px;}
+  .note-block{margin-bottom:26px;}
+  .note-block h3{font-family:'Fraunces'; font-size:18px; font-weight:600; margin-bottom:8px;}
+  .note-block p{font-size:13.5px; color:var(--ink-soft); line-height:1.65;}
+  .note-tags{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .note-tag{font-size:11.5px; font-weight:600; background:var(--deep); color:var(--ink-soft); padding:5px 12px; border-radius:20px; transition:.15s;}
+  .note-tag:hover{background:linear-gradient(135deg,#FFF1DC,#F3E6C9); color:var(--saffron-deep); transform:translateY(-1px);}
+
+  @media (max-width: 860px){
+    .stage{grid-template-columns:1fr; justify-items:center;}
+    .phone{position:static;}
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="intro">
+    <div>
+      <div class="eyebrow">Customer Ordering Experience</div>
+      <h1>Scan → Order → Pay → Track</h1>
+      <p>No app download. The customer's own phone browser is the entire interface. This is a live prototype — tap items to add them, then walk through checkout and tracking.</p>
+    </div>
+    <div class="mode-switch">
+      <button class="mode-btn active" data-screen="menu">1 · Menu</button>
+      <button class="mode-btn" data-screen="checkout">2 · Checkout</button>
+      <button class="mode-btn" data-screen="track">3 · Track</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+
+        <!-- MENU -->
+        <div class="screen active" id="s-menu">
+          <div class="shop-header">
+            <div class="shop-badge">TABLE 5</div>
+            <div class="shop-name">Shree Krishna Tea Stall</div>
+            <div class="shop-meta">Rajkot, Gujarat · Open now · ★ 4.6</div>
+          </div>
+          <div class="cat-tabs" id="cat-tabs" role="tablist" aria-label="Menu categories">
+            <button class="cat-tab on" data-cat="all" role="tab" aria-selected="true">All</button>
+            <button class="cat-tab" data-cat="tea" role="tab" aria-selected="false">Tea &amp; Coffee</button>
+            <button class="cat-tab" data-cat="snacks" role="tab" aria-selected="false">Snacks</button>
+            <button class="cat-tab" data-cat="cold" role="tab" aria-selected="false">Cold Drinks</button>
+            <button class="cat-tab" data-cat="sweets" role="tab" aria-selected="false">Sweets</button>
+          </div>
+          <div class="search-row">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input id="menu-search" type="search" placeholder="Search the menu…" aria-label="Search menu items">
+          </div>
+          <div class="menu-list" id="menu-list"><!-- items injected by JS --></div>
+          <div class="cart-fab hidden" id="cart-fab">
+            <div><div class="l" id="cart-count">0 items</div><div class="amt" id="cart-amt">₹0</div></div>
+            <button class="go" id="view-cart-btn">View Cart →</button>
+          </div>
+        </div>
+
+        <!-- CHECKOUT -->
+        <div class="screen" id="s-checkout" style="justify-content:space-between;">
+          <div>
+            <div class="co-head"><button class="back" data-go="menu">← Back to menu</button><h2>Your order</h2></div>
+            <div class="cart-lines" id="cart-lines"><!-- injected --></div>
+            <div class="co-summary" id="co-summary" style="display:none;">
+              <div class="sum-row"><span>Subtotal</span><span class="mono" id="sum-subtotal">₹0</span></div>
+              <div class="sum-row"><span>Platform fee</span><span class="mono">₹0</span></div>
+              <div class="sum-row total"><span>Total</span><span class="mono" id="sum-total">₹0</span></div>
+            </div>
+            <div class="pay-modes" id="pay-modes">
+              <div class="pay-mode on" data-mode="digital"><div class="ic">📱</div><div class="lb">Pay Digital</div><div class="sub">UPI · Card · Wallet</div></div>
+              <div class="pay-mode" data-mode="cash"><div class="ic">💵</div><div class="lb">Pay Cash</div><div class="sub">At counter</div></div>
+            </div>
+          </div>
+          <button class="place-btn" id="place-btn" disabled>Pay ₹0 &amp; Place Order</button>
+        </div>
+
+        <!-- TRACK -->
+        <div class="screen" id="s-track">
+          <div class="track-hero">
+            <div class="lb">Your token number</div>
+            <div class="track-token">A-023</div>
+            <div class="track-sub">Shree Krishna Tea Stall · Table 5</div>
+          </div>
+          <div class="steps" id="steps">
+            <div class="step done" data-step="0"><div class="step-dot">✓</div><div class="step-body"><div class="nm">Order received &amp; paid</div><div class="tm" id="tm-0">Just now</div></div></div>
+            <div class="step active" data-step="1"><div class="step-dot">●</div><div class="step-body"><div class="nm">Preparing</div><div class="tm" id="tm-1">Started just now</div></div></div>
+            <div class="step" data-step="2"><div class="step-dot">3</div><div class="step-body"><div class="nm">Ready for pickup</div><div class="tm" id="tm-2">Est. 2 min</div></div></div>
+            <div class="step" data-step="3"><div class="step-dot">4</div><div class="step-body"><div class="nm">Collected</div><div class="tm" id="tm-3">—</div></div></div>
+          </div>
+          <div class="track-order">
+            <div class="track-order-card">
+              <div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">Order summary</div>
+              <div id="track-summary"></div>
+            </div>
+          </div>
+          <button class="reorder-btn" data-go="menu">↻ Order again</button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note-block">
+        <h3>1 · Menu</h3>
+        <p>One QR per table resolves straight to the live menu — no login, no app. Tap ADD to build a cart in place; the stepper and floating cart bar update instantly, so the customer always knows what they've ordered without leaving the menu.</p>
+        <div class="note-tags"><span class="note-tag">Zero-friction browse</span><span class="note-tag">Inline quantity stepper</span><span class="note-tag">Persistent cart bar</span></div>
+      </div>
+      <div class="note-block">
+        <h3>2 · Checkout</h3>
+        <p>Digital and Cash sit side by side as equal, first-class choices — this is the platform's core differentiator. The button label changes with the mode, so the customer always knows exactly what tapping it will do.</p>
+        <div class="note-tags"><span class="note-tag">Digital via Razorpay</span><span class="note-tag">Pay-at-counter cash</span><span class="note-tag">Label matches the action</span></div>
+      </div>
+      <div class="note-block">
+        <h3>3 · Track</h3>
+        <p>The token number is the emotional anchor of the whole experience — the same number the kitchen sees on their queue screen. This prototype auto-advances the status a few seconds after an order is placed, mirroring the real-time page the customer actually watches.</p>
+        <div class="note-tags"><span class="note-tag">Auto-refreshing status</span><span class="note-tag">Doubles as receipt</span><span class="note-tag">One-tap reorder</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const MENU = [
+    {id:'chai',  name:'Cutting Chai',  desc:'Our signature half-cup — strong, sweet, milky', price:8,  cat:'tea',    veg:true},
+    {id:'masala',name:'Masala Tea',    desc:'Full cup, ginger & cardamom', price:10, cat:'tea',    veg:true},
+    {id:'coffee',name:'Filter Coffee', desc:'South Indian style, brewed fresh', price:15, cat:'tea', veg:true},
+    {id:'samosa',name:'Samosa',        desc:'Crisp, served with tamarind chutney', price:15, cat:'snacks', veg:true},
+    {id:'bun',   name:'Bun Maska',     desc:'Soft bun, generous butter', price:8,  cat:'snacks', veg:true},
+    {id:'vadapav',name:'Vada Pav',     desc:'Spiced potato fritter, garlic chutney', price:20, cat:'snacks', veg:true},
+    {id:'lassi', name:'Sweet Lassi',   desc:'Chilled, thick, topped with malai', price:30, cat:'cold', veg:true},
+    {id:'iced',  name:'Iced Coffee',   desc:'Cold-brewed, served over ice', price:25, cat:'cold', veg:true},
+    {id:'jalebi',name:'Jalebi',        desc:'Warm, syrup-soaked, 100g', price:35, cat:'sweets', veg:true},
+  ];
+  const cart = {}; // id -> qty
+  let payMode = 'digital';
+  let tokenNo = 'A-023';
+  let activeCat = 'all';
+  let searchTerm = '';
+
+  function money(n){ return '₹'+n; }
+
+  function renderMenu(){
+    const list = document.getElementById('menu-list');
+    const items = MENU.filter(item=>{
+      const catOk = activeCat==='all' || item.cat===activeCat;
+      const term = searchTerm.trim().toLowerCase();
+      const searchOk = !term || item.name.toLowerCase().includes(term) || item.desc.toLowerCase().includes(term);
+      return catOk && searchOk;
+    });
+
+    if(items.length === 0){
+      list.innerHTML = `<div class="menu-empty">
+        <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="36" cy="36" r="34" fill="url(#eg)"/>
+          <path d="M24 30c0-2 2-4 4-4h16c2 0 4 2 4 4v2H24v-2z" stroke="#B56E16" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M24 34h24l-2 12a3 3 0 01-3 2.4H29a3 3 0 01-3-2.4L24 34z" stroke="#B56E16" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="30" cy="46" r="1.4" fill="#B56E16"/><circle cx="42" cy="46" r="1.4" fill="#B56E16"/>
+          <path d="M46 22l4 4M50 22l-4 4" stroke="#D98A2B" stroke-width="2" stroke-linecap="round"/>
+          <defs><radialGradient id="eg" cx="0" cy="0" r="1" gradientTransform="translate(36 36) rotate(90) scale(34)"><stop stop-color="#FFF1DC"/><stop offset="1" stop-color="#F3E6C9" stop-opacity=".4"/></radialGradient></defs>
+        </svg>
+        <div class="t">No items match${searchTerm? ' “'+searchTerm+'”':''}</div>
+        <div class="d">Try a different category or clear your search.</div>
+        <button id="clear-filters">Clear filters</button>
+      </div>`;
+      const clearBtn = document.getElementById('clear-filters');
+      if(clearBtn) clearBtn.addEventListener('click', ()=>{
+        activeCat='all'; searchTerm='';
+        document.getElementById('menu-search').value='';
+        document.querySelectorAll('.cat-tab').forEach(t=>{
+          t.classList.toggle('on', t.dataset.cat==='all');
+          t.setAttribute('aria-selected', t.dataset.cat==='all');
+        });
+        renderMenu();
+      });
+      return;
+    }
+
+    list.innerHTML = items.map((item,i) => {
+      const qty = cart[item.id] || 0;
+      return `
+      <div class="menu-item" style="animation-delay:${Math.min(i,8)*35}ms">
+        <div class="veg-dot"></div>
+        <div class="mi-body">
+          <div class="mi-name">${item.name}</div>
+          <div class="mi-desc">${item.desc}</div>
+          <div class="mi-price">${money(item.price)}</div>
+        </div>
+        <div class="stepper-zone">
+          ${qty === 0
+            ? `<button class="add-btn" data-add="${item.id}">ADD</button>`
+            : `<div class="stepper">
+                 <button data-dec="${item.id}">−</button>
+                 <span class="qty">${qty}</span>
+                 <button data-inc="${item.id}">+</button>
+               </div>`
+          }
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function cartTotal(){
+    return Object.entries(cart).reduce((sum,[id,qty]) => {
+      const item = MENU.find(m=>m.id===id);
+      return sum + item.price*qty;
+    },0);
+  }
+  function cartCount(){
+    return Object.values(cart).reduce((a,b)=>a+b,0);
+  }
+
+  function renderCartFab(){
+    const fab = document.getElementById('cart-fab');
+    const count = cartCount();
+    if(count === 0){ fab.classList.add('hidden'); return; }
+    fab.classList.remove('hidden');
+    document.getElementById('cart-count').textContent = count + (count===1?' item':' items');
+    document.getElementById('cart-amt').textContent = money(cartTotal());
+  }
+
+  function renderCheckout(){
+    const linesEl = document.getElementById('cart-lines');
+    const summaryEl = document.getElementById('co-summary');
+    const placeBtn = document.getElementById('place-btn');
+    const entries = Object.entries(cart).filter(([,q])=>q>0);
+
+    if(entries.length === 0){
+      linesEl.innerHTML = `<div class="co-empty">Your cart is empty.<br>Go back to the menu to add something tasty.</div>`;
+      summaryEl.style.display = 'none';
+      placeBtn.disabled = true;
+      placeBtn.textContent = 'Pay ₹0 & Place Order';
+      return;
+    }
+    linesEl.innerHTML = entries.map(([id,qty])=>{
+      const item = MENU.find(m=>m.id===id);
+      return `<div class="cart-line"><div><div class="nm">${item.name}</div><div class="qty">Qty ${qty} · ${money(item.price)} each</div></div><div class="mono">${money(item.price*qty)}</div></div>`;
+    }).join('');
+    const total = cartTotal();
+    document.getElementById('sum-subtotal').textContent = money(total);
+    document.getElementById('sum-total').textContent = money(total);
+    summaryEl.style.display = 'block';
+    placeBtn.disabled = false;
+    placeBtn.innerHTML = payMode === 'digital'
+      ? `Pay ${money(total)} &amp; Place Order`
+      : `Confirm ${money(total)} Cash Order`;
+  }
+
+  function renderTrackSummary(){
+    const entries = Object.entries(cart).filter(([,q])=>q>0);
+    const el = document.getElementById('track-summary');
+    if(entries.length === 0){
+      el.innerHTML = `<div class="sum-row"><span>Cutting Chai ×2</span><span class="mono">₹16</span></div><div class="sum-row"><span>Samosa ×1</span><span class="mono">₹15</span></div><div class="sum-row total"><span>Paid via UPI</span><span class="mono">₹31</span></div>`;
+      return;
+    }
+    const total = cartTotal();
+    el.innerHTML = entries.map(([id,qty])=>{
+      const item = MENU.find(m=>m.id===id);
+      return `<div class="sum-row"><span>${item.name} ×${qty}</span><span class="mono">${money(item.price*qty)}</span></div>`;
+    }).join('') + `<div class="sum-row total"><span>${payMode==='digital'?'Paid via UPI':'Pay cash at counter'}</span><span class="mono">${money(total)}</span></div>`;
+  }
+
+  document.getElementById('menu-list').addEventListener('click', e=>{
+    const add = e.target.dataset.add, inc = e.target.dataset.inc, dec = e.target.dataset.dec;
+    if(add){ cart[add] = 1; }
+    if(inc){ cart[inc] = (cart[inc]||0) + 1; }
+    if(dec){ cart[dec] = Math.max(0,(cart[dec]||0) - 1); }
+    renderMenu(); renderCartFab();
+  });
+
+  document.getElementById('cat-tabs').addEventListener('click', e=>{
+    const tab = e.target.closest('.cat-tab');
+    if(!tab) return;
+    activeCat = tab.dataset.cat;
+    document.querySelectorAll('.cat-tab').forEach(t=>{
+      t.classList.toggle('on', t===tab);
+      t.setAttribute('aria-selected', t===tab);
+    });
+    renderMenu();
+  });
+
+  document.getElementById('menu-search').addEventListener('input', e=>{
+    searchTerm = e.target.value;
+    renderMenu();
+  });
+
+  document.getElementById('view-cart-btn').addEventListener('click', ()=> goScreen('checkout'));
+  document.querySelectorAll('[data-go]').forEach(el=> el.addEventListener('click', ()=> goScreen(el.dataset.go)));
+
+  document.getElementById('pay-modes').addEventListener('click', e=>{
+    const modeEl = e.target.closest('.pay-mode');
+    if(!modeEl) return;
+    payMode = modeEl.dataset.mode;
+    document.querySelectorAll('.pay-mode').forEach(m=>m.classList.toggle('on', m===modeEl));
+    renderCheckout();
+  });
+
+  document.getElementById('place-btn').addEventListener('click', ()=>{
+    if(document.getElementById('place-btn').disabled) return;
+    renderTrackSummary();
+    resetTracking();
+    goScreen('track');
+  });
+
+  function goScreen(name){
+    document.querySelectorAll('.mode-btn').forEach(b=> b.classList.toggle('active', b.dataset.screen===name));
+    document.querySelectorAll('.screen').forEach(s=> s.classList.remove('active'));
+    document.getElementById('s-'+name).classList.add('active');
+    if(name==='checkout') renderCheckout();
+    if(name==='track') renderTrackSummary();
+  }
+  document.querySelectorAll('.mode-btn').forEach(btn=> btn.addEventListener('click', ()=> goScreen(btn.dataset.screen)));
+
+  let trackTimer = null;
+  function resetTracking(){
+    clearTimeout(trackTimer);
+    document.querySelectorAll('#steps .step').forEach(s=>{
+      const idx = +s.dataset.step;
+      s.classList.toggle('done', idx===0);
+      s.classList.toggle('active', idx===1);
+      s.querySelector('.step-dot').textContent = idx===0?'✓':(idx===1?'●':(idx+1));
+    });
+    document.getElementById('tm-1').textContent = 'Started just now';
+    document.getElementById('tm-2').textContent = 'Est. 2 min';
+    trackTimer = setTimeout(()=>{
+      const s1 = document.querySelector('#steps .step[data-step="1"]');
+      const s2 = document.querySelector('#steps .step[data-step="2"]');
+      s1.classList.remove('active'); s1.classList.add('done'); s1.querySelector('.step-dot').textContent='✓';
+      s2.classList.add('active'); s2.querySelector('.step-dot').textContent='●';
+      document.getElementById('tm-2').textContent = 'Ready now';
+    }, 3200);
+  }
+
+  renderMenu();
+  renderCartFab();
+</script>
+</body>
+</html>
