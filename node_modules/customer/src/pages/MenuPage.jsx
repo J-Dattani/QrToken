@@ -1,28 +1,39 @@
 import MenuSection from "../components/menu/MenuSection";
-import products from "../constants/mockMenu";
+import { useParams } from "react-router-dom";
+// import products from "../constants/mockMenu";
 import MerchantHeader from "../components/layout/MerchantHeader";
 import SearchBar from "../components/menu/SearchBar";
 import CategoryTabs from "../components/menu/CategoryTabs";
 import { useSelector } from "react-redux";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import api from "../config/api";
 
-function MenuPage() {
-  const categories = [
-  "All",
-  "Starters",
-  "Fast Food",
-  "Main Course",
-  "Beverages",
-  "Snacks",
-];
-
+const MenuPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-
+  const [items, setItems] = useState([]);
+  const [merchant, setMerchant] = useState(null);
+  const [categories, setCategories] = useState([]);
   const cartItems = useSelector((state) => state.cart.items);
+  const { merchantId } = useParams();
 
-const filteredProducts = products.filter((product) => {
+useEffect(() => {
+  const fetchMenu = async () => {
+    const response = await api.get(`/menu/public/${merchantId}`);
+    setMerchant(response.data.merchant);
+    setItems(response.data.items);
+    setCategories(["All", ...new Set(response.data.items.map((item) => item.category))]);
+console.log(response.data.items);
+
+  };
+
+  
+
+  fetchMenu();  
+}, [merchantId]);
+
+const filteredProducts = items.filter((product) => {
   const matchesSearch = product.name
     .toLowerCase()
     .includes(searchQuery.toLowerCase());
@@ -34,14 +45,18 @@ const filteredProducts = products.filter((product) => {
   return matchesSearch && matchesCategory;
 });
 
+if (!merchant) {
+  return <p>Loading...</p>;
+}
   return (
     <>
 
     <div className="menu-page">
     <MerchantHeader
-  name="The Spice House"
-  location="Downtown, Cityville"
-  isOpen={true}
+  name={merchant.name}
+  location={merchant.city}
+  isOpen={merchant.isOpen}
+  rating={merchant.rating}
 />
 
 <h1>Menu</h1>

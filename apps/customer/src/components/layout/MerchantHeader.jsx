@@ -1,11 +1,21 @@
-function MerchantHeader({ name, location, isOpen }) {
+function MerchantHeader({ name, location, isOpen, rating }) {
   return (
     <div className="merchant-header">
-      <h2>{name}</h2>
-      <p>{location}</p>
-      <div>
-        Status: <span>{isOpen ? "Open" : "Closed"}</span>
-      </div>
+      <h1>{name}</h1>
+
+      <p>📍 {location}</p>
+
+      <p>
+        Status:
+        <strong style={{ color: isOpen ? "green" : "red" }}>
+          {" "}
+          {isOpen ? "Open" : "Closed"}
+        </strong>
+      </p>
+
+      <p>⭐ {rating} / 5</p>
+
+      <hr />
     </div>
   );
 }

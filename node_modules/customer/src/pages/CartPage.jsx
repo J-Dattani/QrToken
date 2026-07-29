@@ -25,17 +25,17 @@ function CartPage() {
       ) : (
         <>
           {cartItems.map((item) => (
-            <div key={item.id}>
+            <div key={item._id}>
               <h3>{item.name}</h3>
               <p>Price: ₹{item.price}</p>
 
               <QuantityStepper
                 quantity={item.quantity}
                 onIncrease={() =>
-                  dispatch(increaseItemQuantity(item.id))
+                  dispatch(increaseItemQuantity(item._id))
                 }
                 onDecrease={() =>
-                  dispatch(decreaseItemQuantity(item.id))
+                  dispatch(decreaseItemQuantity(item._id))
                 }
               />
 

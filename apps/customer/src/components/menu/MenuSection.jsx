@@ -11,7 +11,7 @@ function MenuSection({ title, items }) {
         <div className="menu-items-list">
           {items.map((item) => (
             <MenuItem
-  key={item.id}
+  key={item._id}
   product={item}
 />
           ))}

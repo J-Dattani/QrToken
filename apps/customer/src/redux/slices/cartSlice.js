@@ -17,7 +17,7 @@ const cartSlice = createSlice({
             state.tableId = action.payload.tableId;
         },
         addItem(state, action){
-         const existingItem = state.items.find((item) => item.id === action.payload.id);
+         const existingItem = state.items.find((item) => item._id === action.payload._id);
 
             if(existingItem){
                 existingItem.quantity += 1;
@@ -27,29 +27,34 @@ const cartSlice = createSlice({
         },
         increaseItemQuantity(state, action){
             const existingItem = state.items.find(
-                (item) => item.id === action.payload
+                (item) => item._id === action.payload
             )
             if(existingItem){
                 existingItem.quantity += 1;
             }
 
         },
-        decreaseItemQuantity(state, action){
-            const existingItem = state.items.find(
-                (item) => item.id === action.payload
-            )
-            if(existingItem && existingItem.quantity > 1){
-                existingItem.quantity -= 1;
-            }
-            else{
-                state.items = state.items.filter(
-  (item) => item.id !== action.payload
-);
-            }
+      decreaseItemQuantity(state, action) {
+    console.log("Payload:", action.payload);
 
-        },
+    const existingItem = state.items.find(
+        (item) => item._id === action.payload
+    );
+
+    console.log("Existing Item:", existingItem);
+
+    if (existingItem && existingItem.quantity > 1) {
+        existingItem.quantity -= 1;
+    } else {
+        state.items = state.items.filter(
+            (item) => item._id !== action.payload
+        );
+    }
+
+    console.log("Cart:", state.items);
+},
         removeItem(state, action){
-            state.items = state.items.filter((item) => item.id !== action.payload);
+            state.items = state.items.filter((item) => item._id !== action.payload);
         },
         clearCart(state){
             state.items = [];

@@ -12,7 +12,7 @@ import QuantityStepper from "./QuantityStepper";
         const dispatch = useDispatch();
 
           const cartItem = useSelector((state) =>
-    state.cart.items.find((item) => item.id === product.id)
+    state.cart.items.find((item) => item._id === product._id)
   );
 
         return (
@@ -25,8 +25,8 @@ import QuantityStepper from "./QuantityStepper";
               {cartItem ? (
                 <QuantityStepper
                   quantity={cartItem.quantity}
-                  onDecrease={() => dispatch(decreaseItemQuantity(cartItem.id))}
-                  onIncrease={() => dispatch(increaseItemQuantity(cartItem.id))}
+                  onDecrease={() => dispatch(decreaseItemQuantity(cartItem._id))}
+                  onIncrease={() => dispatch(increaseItemQuantity(cartItem._id))}
                 />
               ) : (
                 <button onClick={() => dispatch(addItem(product))} className="add-to-cart-btn">
