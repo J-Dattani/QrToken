@@ -51,7 +51,7 @@ if (!merchant) {
   return (
     <>
 
-    <div className="menu-page">
+ <div className="menu-page max-w-3xl mx-auto px-4 py-4">
     <MerchantHeader
   name={merchant.name}
   location={merchant.city}
@@ -60,10 +60,10 @@ if (!merchant) {
 />
 
 <h1>Menu</h1>
+{/* 
+<p>Cart Items: {cartItems.length}</p> */}
 
-<p>Cart Items: {cartItems.length}</p>
-
-<Link to="/cart" className="view-cart-link">View Cart</Link>
+<Link to="/cart" className="space-y-3">View Cart</Link>
 
 <SearchBar
   value={searchQuery}

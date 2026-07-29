@@ -16,24 +16,34 @@ import QuantityStepper from "./QuantityStepper";
   );
 
         return (
-            <div className="menu-item">
-                <span className={`veg-indicator ${product.isVeg ? 'veg' : 'non-veg'}`}></span>
-                    <h3 className="menu-item-name">{product.name}</h3>
-                    <p className="menu-item-desc">{product.description}</p>
-                    <p className="menu-item-price">₹{product.price}</p>
-              
-              {cartItem ? (
-                <QuantityStepper
-                  quantity={cartItem.quantity}
-                  onDecrease={() => dispatch(decreaseItemQuantity(cartItem._id))}
-                  onIncrease={() => dispatch(increaseItemQuantity(cartItem._id))}
-                />
-              ) : (
-                <button onClick={() => dispatch(addItem(product))} className="add-to-cart-btn">
-                  Add to Cart
-                </button>
-              )}
-            </div>
+      <div className="flex justify-between items-start py-4 border-b border-gray-200">
+          <div className="flex-1 pr-4">
+  <span className={`veg-indicator ${product.isVeg ? "veg" : "non-veg"}`}></span>
+
+  <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+
+  <p className="text-sm text-gray-500 mt-1">{product.description}</p>
+</div>
+
+<div className="flex flex-col items-end gap-2">
+  <p className="text-lg font-bold text-green-600">₹{product.price}</p>
+
+  {cartItem ? (
+    <QuantityStepper
+      quantity={cartItem.quantity}
+      onDecrease={() => dispatch(decreaseItemQuantity(cartItem._id))}
+      onIncrease={() => dispatch(increaseItemQuantity(cartItem._id))}
+    />
+  ) : (
+    <button
+      onClick={() => dispatch(addItem(product))}
+      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+    >
+      Add to Cart
+    </button>
+  )}
+</div>
+          </div>
         )           
 
     }
