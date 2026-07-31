@@ -2,8 +2,8 @@ import { Routes, Route } from "react-router-dom";
 import MenuPage from "../pages/MenuPage";
 import CartPage from "../pages/CartPage";
 import CheckoutPage from "../pages/CheckoutPage";
-import OrderTrackingPage from "../pages/OrderTrackingPage";
 import NotFoundPage from "../pages/NotFoundPage";
+import TrackOrderPage from "../pages/TrackOrderPage";
 
 function CustomerRoutes() {
   return (
@@ -17,7 +17,7 @@ function CustomerRoutes() {
 
       <Route path="/shop/:merchantId/checkout" element={<CheckoutPage />} />
 
-      <Route path="/order/:orderId" element={<OrderTrackingPage />} />
+      <Route path="/track/:orderId" element={<TrackOrderPage />} />
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
