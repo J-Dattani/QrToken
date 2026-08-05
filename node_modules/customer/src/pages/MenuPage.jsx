@@ -26,6 +26,7 @@ const MenuPage = () => {
 const [activeOrder, setActiveOrder] = useState(getActiveOrder());
   const [categories, setCategories] = useState([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [taxConfig, setTaxConfig] = useState(null);
   const { merchantId } = useParams();
   const orders = getOrderHistory();
   useEffect(() => {
@@ -33,11 +34,15 @@ const [activeOrder, setActiveOrder] = useState(getActiveOrder());
       const response = await api.get(`/menu/public/${merchantId}`);
       setMerchant(response.data.merchant);
       setItems(response.data.items || []);
+      setTaxConfig(response.data.taxConfig);
+
       setCategories([
         "All",
         ...Array.from(new Set((response.data.items || []).map((item) => item.category)))
       ]);
       console.log(response.data.items);
+      console.log(response.data.merchant);
+console.log(response.data.merchant.taxConfig);
     };
 
     fetchMenu();
@@ -126,6 +131,7 @@ return (
   merchantId={merchant._id}
   merchantSlug={merchantId} 
   isOpen={isCheckoutOpen}
+    taxConfig={taxConfig}
   onClose={handleCloseCheckout}
 />
 

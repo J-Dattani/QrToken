@@ -15,7 +15,7 @@ import {
 import OrderSuccess from "../tracking/OrderSuccess";
 
 
-function CheckoutModal({ isOpen, onClose, merchantId, merchantSlug }) {
+function CheckoutModal({ isOpen, onClose, merchantId, merchantSlug, taxConfig }) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   
@@ -180,7 +180,7 @@ setShowSuccess(true);
           </div>
 
           <div className="bg-white rounded-xl border p-4 shadow-sm">
-          <BillSummary />
+          <BillSummary taxConfig={taxConfig} />
           </div>
 
         </div>

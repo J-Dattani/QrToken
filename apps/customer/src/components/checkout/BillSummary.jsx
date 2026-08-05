@@ -1,15 +1,16 @@
 import { useSelector } from "react-redux";
 
-function BillSummary() {
+function BillSummary({ taxConfig }) {
   const cartItems = useSelector((state) => state.cart.items);
 
 const subtotal = cartItems.reduce((total, item) => {
   return total + item.price * item.quantity;
 }, 0);
 
-const gst = 0; 
+const cgst = subtotal * ((taxConfig?.cgstPercent || 0) / 100);
+const sgst = subtotal * ((taxConfig?.sgstPercent || 0) / 100);
+const total = subtotal + sgst + cgst;
 
-const total = subtotal + gst;
 
   return ( 
      <div className="mt-6">
@@ -17,13 +18,18 @@ const total = subtotal + gst;
 
       <div className="flex justify-between">
         <span>Subtotal</span>
-        <span>₹{subtotal}</span>
+        <span>₹{subtotal.toFixed(2)}</span>
       </div>
 
       <div className="flex justify-between">
-        <span>GST</span>
-        <span>₹{gst}</span>
-      </div>
+  <span>CGST ({taxConfig?.cgstPercent || 0}%)</span>
+  <span>₹{cgst.toFixed(2)}</span>
+</div>
+
+<div className="flex justify-between">
+  <span>SGST ({taxConfig?.sgstPercent || 0}%)</span>
+  <span>₹{sgst.toFixed(2)}</span>
+</div>
 
      
 
@@ -31,7 +37,7 @@ const total = subtotal + gst;
 
       <div className="flex justify-between font-bold">
         <span>Total</span>
-        <span>₹{total}</span>
+        <span>₹{total.toFixed(2)}</span>
       </div>
     </div>
   );
