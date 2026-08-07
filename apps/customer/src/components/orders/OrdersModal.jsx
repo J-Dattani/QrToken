@@ -3,66 +3,134 @@ function OrdersModal({ isOpen, onClose, orders, onTrack }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl w-[500px] max-w-[95%] max-h-[80vh] overflow-hidden"
+        className="w-full max-w-xl overflow-hidden rounded-3xl bg-[#F8F3ED] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center border-b p-5">
-          <h2 className="text-2xl font-bold">
-            📜 Your Orders
-          </h2>
+
+        <div className="bg-gradient-to-r from-[#6F4E37] to-[#A56A2A] px-6 py-5 flex items-center justify-between">
+
+          <div>
+
+            <h2 className="text-2xl font-bold text-white">
+              📜 Order History
+            </h2>
+
+            <p className="text-[#FDE8C8] text-sm mt-1">
+              Your previous orders
+            </p>
+
+          </div>
 
           <button
             onClick={onClose}
-            className="text-2xl cursor-pointer"
+            className="
+              w-10
+              h-10
+              rounded-full
+              bg-white/20
+              text-white
+              text-2xl
+              hover:bg-white/30
+              transition
+              cursor-pointer
+            "
           >
             ×
           </button>
+
         </div>
 
         {/* Body */}
-        <div className="p-5 overflow-y-auto max-h-[60vh]">
+
+        <div className="max-h-[65vh] overflow-y-auto p-6">
 
           {orders.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              📦
-              <p className="mt-3">
-                No past orders placed on this browser yet.
+
+            <div className="py-16 text-center">
+
+              <div className="text-6xl mb-5">
+                📦
+              </div>
+
+              <h3 className="text-xl font-semibold text-[#4B2E1F]">
+                No Orders Yet
+              </h3>
+
+              <p className="text-gray-500 mt-2">
+                Your previous orders will appear here.
               </p>
+
             </div>
+
           ) : (
 
             <div className="space-y-4">
 
               {orders.map((order) => (
+
                 <div
                   key={order.orderId}
-                  className="border rounded-xl p-4 flex justify-between items-center"
+                  className="
+                    rounded-2xl
+                    border
+                    border-[#E7D8C7]
+                    bg-white
+                    p-5
+                    shadow-sm
+                    hover:shadow-md
+                    transition
+                    flex
+                    justify-between
+                    items-center
+                  "
                 >
+
                   <div>
 
-                    <h3 className="font-bold">
+                    <h3 className="text-xl font-bold text-[#4B2E1F]">
                       #{order.tokenNumber}
                     </h3>
 
-                    <p className="text-gray-500 text-sm">
+                    <span className="
+                      inline-block
+                      mt-2
+                      rounded-full
+                      bg-[#FFF4E8]
+                      px-3
+                      py-1
+                      text-sm
+                      font-medium
+                      text-[#6F4E37]
+                    ">
                       {order.status}
-                    </p>
+                    </span>
 
                   </div>
 
                   <button
                     onClick={() => onTrack(order)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg cursor-pointer"
+                    className="
+                      rounded-xl
+                      bg-[#6F4E37]
+                      px-5
+                      py-3
+                      font-semibold
+                      text-white
+                      hover:bg-[#5A3E2B]
+                      transition
+                      cursor-pointer
+                    "
                   >
-                    Track
+                    Track →
                   </button>
 
                 </div>
+
               ))}
 
             </div>
@@ -70,6 +138,7 @@ function OrdersModal({ isOpen, onClose, orders, onTrack }) {
           )}
 
         </div>
+
       </div>
     </div>
   );

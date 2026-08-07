@@ -6,7 +6,21 @@ function MenuSection({ title, items }) {
       {title && <h2>{title}</h2>}
 
       {items.length === 0 ? (
-        <p>No items found.</p>
+        <div className="py-14 text-center">
+
+  <div className="text-6xl mb-5">
+    🍵
+  </div>
+
+  <h3 className="text-2xl font-bold text-[#4B2E1F]">
+    No Items Found
+  </h3>
+
+  <p className="text-gray-500 mt-3">
+    No items matched your search.
+  </p>
+
+</div>
       ) : (
         <div className="menu-items-list">
           {items.map((item) => (

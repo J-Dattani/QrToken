@@ -5,12 +5,13 @@ import MerchantHeader from "../components/layout/MerchantHeader";
 import SearchBar from "../components/menu/SearchBar";
 import CategoryTabs from "../components/menu/CategoryTabs";
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+// import { Link } from "react-router-dom";
 import CheckoutModal from "../components/checkout/CheckoutModal";
 import api from "../config/api";
 import BottomCart from "../components/checkout/BottomCart";
 import { useNavigate } from "react-router-dom";
 import OrdersModal from "../components/orders/OrdersModal";
+import { COLORS } from "../constants/theme";
 import {
   getActiveOrder,
   getOrderHistory,
@@ -68,7 +69,13 @@ console.log(response.data.merchant.taxConfig);
   });
 
   if (!merchant) {
-    return <p>Loading...</p>;
+    return <div className="min-h-screen bg-[#F8F3ED] flex flex-col items-center justify-center">
+  <div className="h-12 w-12 rounded-full border-4 border-[#D7C2AD] border-t-[#6F4E37] animate-spin"></div>
+
+  <p className="mt-5 text-[#6F4E37] font-medium">
+    Loading your order...
+  </p>
+</div>;
   }
  
 
@@ -84,38 +91,72 @@ return (
     <>
 
 <div className="menu-page max-w-3xl mx-auto px-4 py-4">
-  {activeOrder && (
-  <div className="bg-green-700 text-white p-3 rounded-lg flex justify-between items-center mb-4">
-    <span>
-      🔥 Active Order #{activeOrder.tokenNumber}
-    </span>
+ {activeOrder && (
+  <div className="mb-6 rounded-3xl bg-gradient-to-r from-[#6F4E37] to-[#A56A2A] p-5 shadow-lg flex items-center justify-between">
+
+    <div>
+      <p className="text-sm text-[#FDE8C8] font-medium">
+        🔥 ACTIVE ORDER
+      </p>
+
+      <h3 className="text-2xl font-bold text-white mt-1">
+        #{activeOrder.tokenNumber}
+      </h3>
+
+      <p className="text-[#F6E9DB] text-sm mt-1">
+        Your order is being prepared
+      </p>
+    </div>
+
+    <button
+      onClick={() => navigate(`/track/${activeOrder.orderId}`)}
+      className="
+        bg-white
+        text-[#6F4E37]
+        font-semibold
+        px-6
+        py-3
+        rounded-2xl
+        shadow-md
+        hover:bg-[#FFF4E8]
+        transition
+        cursor-pointer
+      "
+    >
+      Track →
+    </button>
+
+  </div>
+)}  
+
+<div className="menu-page max-w-5xl mx-auto">
 
   <button
-  onClick={() => navigate(`/track/${activeOrder.orderId}`)}
-  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg cursor-pointer transition"
->
-  Track →
-</button>
-  </div>
-)}
-<button
-  onClick={() => setIsOrdersOpen(true)}
-  className="border rounded-full px-4 py-2 cursor-pointer"
->
-  📜 Orders ({orders.length})
-</button>
-    <MerchantHeader
-  name={merchant.name}
-  location={merchant.city}
-  isOpen={merchant.isOpen}
-  rating={merchant.rating}
-/>
+    onClick={() => setIsOrdersOpen(true)}
+    className="mb-4 px-5 py-2 rounded-full font-medium transition hover:opacity-90"
+    style={{
+      backgroundColor: COLORS.primary,
+      color: "#fff",
+      cursor: "pointer",
+    }}
+  >
+    📜 Orders ({orders.length})
+  </button>
 
-<h1>Menu</h1>
+  <MerchantHeader
+    name={merchant.name}
+    location={merchant.city}
+    isOpen={merchant.isOpen}
+    rating={merchant.rating}
+    openingHours={merchant.openingHours}
+    tagline={merchant.tagline}
+  />
+
+</div>
 {/*
 <p>Cart Items: {cartItems.length}</p> */}
 
-<Link to="/cart" className="space-y-3">View Cart</Link>
+{/* <Link to="/cart" className="space-y-3">View Cart</Link> */}
       <SearchBar value={searchQuery} onChange={setSearchQuery} />
 <CategoryTabs
   categories={categories}

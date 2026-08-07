@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate  } from "react-router-dom";
 import MenuPage from "../pages/MenuPage";
 import CartPage from "../pages/CartPage";
 import CheckoutPage from "../pages/CheckoutPage";
@@ -8,6 +8,15 @@ import TrackOrderPage from "../pages/TrackOrderPage";
 function CustomerRoutes() {
   return (
     <Routes>
+      <Route
+  path="/"
+  element={
+    <Navigate
+      to="/shop/shree-krishna-tea-stall"
+      replace
+    />
+  }
+/>
 
       <Route path="/shop/:merchantId" element={<MenuPage />} />
 

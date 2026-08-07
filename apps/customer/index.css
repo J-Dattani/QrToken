@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #7c2d12;
+  --primary-light: #9a3412;
+  --primary-dark: #431407;
+
+  --accent: #f59e0b;
+  --accent-light: #fbbf24;
+
+  --surface: #fffaf5;
+  --card: #ffffff;
+
+  --heading: #1f2937;
+  --body: #6b7280;
+
+  --success: #16a34a;
+  --danger: #dc2626;
+}
+
+@keyframes successPop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
