@@ -2,7 +2,7 @@ import { Ticket } from "lucide-react";
 
 function TokenCard({ tokenNumber }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#6F4E37] via-[#8B5E3C] to-[#C88A13] p-8 text-center shadow-xl">
+    <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-[#6F4E37] via-[#8B5E3C] to-[#C88A13] p-8 text-center shadow-xl">
 
       {/* Background Decoration */}
       <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10"></div>
