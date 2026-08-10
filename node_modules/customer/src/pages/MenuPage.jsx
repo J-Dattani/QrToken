@@ -92,7 +92,7 @@ return (
 
 <div className="menu-page max-w-3xl mx-auto px-4 py-4">
  {activeOrder && (
-  <div className="mb-6 rounded-3xl bg-gradient-to-r from-[#6F4E37] to-[#A56A2A] p-5 shadow-lg flex items-center justify-between">
+  <div className="mb-6 rounded-3xl bg-linear-to-r from-[#6F4E37] to-[#A56A2A] p-5 shadow-lg flex items-center justify-between">
 
     <div>
       <p className="text-sm text-[#FDE8C8] font-medium">
