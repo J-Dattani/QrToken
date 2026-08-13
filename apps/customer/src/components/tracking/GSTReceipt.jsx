@@ -30,17 +30,35 @@ function GSTReceipt({ order, merchant }) {
 
   const items = order?.items || [];
 
-  const subtotal =
-    Number(order?.subtotal || 0);
+  const subtotal = Number(order?.subtotal || 0);
 
-  const total =
-    Number(order?.total || 0);
+  const discountAmount = Number(
+    order?.discountAmount || 0
+  );
+
+  const couponCode =
+    order?.couponCode || "";
+
+  const total = Number(order?.total || 0);
+
+  // -----------------------------------------
+  // GST
+  //
+  // Final total is GST inclusive.
+  //
+  // GST = 5%
+  // CGST = 2.5%
+  // SGST = 2.5%
+  // -----------------------------------------
+
+  const taxableAmount =
+    total / 1.05;
 
   const cgst =
-    Number((total - subtotal) / 2 || 0);
+    taxableAmount * 0.025;
 
   const sgst =
-    Number((total - subtotal) / 2 || 0);
+    taxableAmount * 0.025;
 
   // -----------------------------------------
   // Payment
@@ -55,9 +73,21 @@ function GSTReceipt({ order, merchant }) {
   const isCashPayment =
     paymentMethod === "cash";
 
-  const paymentLabel = isCashPayment
-    ? "💵 CASH AT COUNTER"
-    : "💳 ONLINE PAYMENT";
+  const isDigitalPayment =
+    paymentMethod === "digital" ||
+    paymentMethod === "online" ||
+    paymentMethod === "upi" ||
+    paymentMethod === "razorpay" ||
+    paymentMethod === "phonepe" ||
+    paymentMethod === "paytm";
+
+  let paymentLabel = "PAYMENT";
+
+  if (isCashPayment) {
+    paymentLabel = "💵 CASH AT COUNTER";
+  } else if (isDigitalPayment) {
+    paymentLabel = "💳 DIGITAL PAYMENT";
+  }
 
   const paymentStatus =
     order?.paymentStatus || "Pending";
@@ -69,10 +99,14 @@ function GSTReceipt({ order, merchant }) {
   const invoiceNumber =
     `QRT-${order?.tokenNumber || "ORDER"}-${String(
       order?._id || ""
-    ).slice(-6).toUpperCase()}`;
+    )
+      .slice(-6)
+      .toUpperCase()}`;
 
   const orderDate = order?.createdAt
-    ? new Date(order.createdAt).toLocaleDateString("en-IN")
+    ? new Date(order.createdAt).toLocaleDateString(
+        "en-IN"
+      )
     : new Date().toLocaleDateString("en-IN");
 
   const orderType =
@@ -84,34 +118,16 @@ function GSTReceipt({ order, merchant }) {
   // Print
   // -----------------------------------------
 
-//   const handlePrint = () => {
-//     window.print();
-//   };
+ 
 
   return (
-    <>
-      {/* Print Button */}
-      {/* <div className="flex justify-end mb-3 print:hidden">
-        <button
-          onClick={handlePrint}
-          className="
-            rounded-lg
-            bg-[#1C1A17]
-            px-4
-            py-2
-            text-sm
-            font-semibold
-            text-white
-            transition
-            hover:bg-[#2A2723]
-            cursor-pointer
-          "
-        >
-          🖨 Print
-        </button>
-      </div> */}
+    <div className="gst-receipt-wrapper">
 
-      {/* Receipt */}
+
+      {/* ===================================== */}
+      {/* RECEIPT */}
+      {/* ===================================== */}
+
       <div
         className="
           gst-receipt-print
@@ -124,7 +140,10 @@ function GSTReceipt({ order, merchant }) {
         "
       >
 
+        {/* ----------------------------------- */}
         {/* Merchant Header */}
+        {/* ----------------------------------- */}
+
         <div className="text-center">
 
           <h1 className="text-2xl font-bold">
@@ -149,7 +168,10 @@ function GSTReceipt({ order, merchant }) {
 
         <div className="my-5 border-t border-dashed border-gray-400" />
 
+        {/* ----------------------------------- */}
         {/* Invoice Title */}
+        {/* ----------------------------------- */}
+
         <div className="text-center">
 
           <h2 className="text-lg font-bold tracking-[0.3em]">
@@ -158,7 +180,10 @@ function GSTReceipt({ order, merchant }) {
 
         </div>
 
+        {/* ----------------------------------- */}
         {/* Invoice Details */}
+        {/* ----------------------------------- */}
+
         <div className="mt-6 space-y-2 text-sm">
 
           <div className="flex justify-between gap-4">
@@ -217,7 +242,10 @@ function GSTReceipt({ order, merchant }) {
 
         </div>
 
+        {/* ----------------------------------- */}
         {/* Token */}
+        {/* ----------------------------------- */}
+
         <div
           className="
             mt-6
@@ -249,13 +277,16 @@ function GSTReceipt({ order, merchant }) {
 
         </div>
 
+        {/* ----------------------------------- */}
         {/* Items */}
+        {/* ----------------------------------- */}
+
         <div className="mt-7">
 
           <div
             className="
               grid
-              grid-cols-[1fr_60px_80px_90px]
+              grid-cols-[1fr_55px_75px_85px]
               gap-2
               border-b
               border-black
@@ -265,9 +296,18 @@ function GSTReceipt({ order, merchant }) {
             "
           >
             <span>Item</span>
-            <span className="text-center">Qty</span>
-            <span className="text-right">Price</span>
-            <span className="text-right">Amount</span>
+
+            <span className="text-center">
+              Qty
+            </span>
+
+            <span className="text-right">
+              Price
+            </span>
+
+            <span className="text-right">
+              Amount
+            </span>
           </div>
 
           {items.map((item, index) => {
@@ -286,7 +326,7 @@ function GSTReceipt({ order, merchant }) {
                 key={item?._id || index}
                 className="
                   grid
-                  grid-cols-[1fr_60px_80px_90px]
+                  grid-cols-[1fr_55px_75px_85px]
                   gap-2
                   border-b
                   border-dashed
@@ -318,20 +358,73 @@ function GSTReceipt({ order, merchant }) {
 
         </div>
 
+        {/* ----------------------------------- */}
         {/* Amounts */}
-        <div className="mt-5 border-t border-dashed border-gray-400 pt-4">
+        {/* ----------------------------------- */}
+
+        <div
+          className="
+            mt-5
+            border-t
+            border-dashed
+            border-gray-400
+            pt-4
+          "
+        >
+
+          {/* Original Subtotal */}
 
           <div className="flex justify-between text-sm">
+
+            <span>
+              Subtotal
+            </span>
+
+            <span className="font-semibold">
+              ₹{subtotal.toFixed(2)}
+            </span>
+
+          </div>
+
+          {/* Coupon */}
+
+          {discountAmount > 0 && (
+            <div className="mt-2 flex justify-between text-sm">
+
+              <span className="text-green-700">
+                Coupon Discount
+                {couponCode && (
+                  <span className="ml-1 font-semibold">
+                    ({couponCode})
+                  </span>
+                )}
+              </span>
+
+              <span className="font-semibold text-green-700">
+                -₹{discountAmount.toFixed(2)}
+              </span>
+
+            </div>
+          )}
+
+          {/* Taxable Amount */}
+
+          <div className="mt-2 flex justify-between text-sm">
+
             <span>
               Subtotal (Pre-tax)
             </span>
 
             <span className="font-semibold">
-              ₹{(total - cgst - sgst).toFixed(2)}
+              ₹{taxableAmount.toFixed(2)}
             </span>
+
           </div>
 
+          {/* CGST */}
+
           <div className="mt-2 flex justify-between text-sm text-gray-500">
+
             <span>
               CGST @ 2.5%
             </span>
@@ -339,9 +432,13 @@ function GSTReceipt({ order, merchant }) {
             <span>
               ₹{cgst.toFixed(2)}
             </span>
+
           </div>
 
+          {/* SGST */}
+
           <div className="mt-2 flex justify-between text-sm text-gray-500">
+
             <span>
               SGST @ 2.5%
             </span>
@@ -349,11 +446,15 @@ function GSTReceipt({ order, merchant }) {
             <span>
               ₹{sgst.toFixed(2)}
             </span>
+
           </div>
 
         </div>
 
+        {/* ----------------------------------- */}
         {/* Grand Total */}
+        {/* ----------------------------------- */}
+
         <div
           className="
             mt-4
@@ -366,6 +467,7 @@ function GSTReceipt({ order, merchant }) {
             font-black
           "
         >
+
           <span>
             GRAND TOTAL
           </span>
@@ -373,9 +475,13 @@ function GSTReceipt({ order, merchant }) {
           <span>
             ₹{total.toFixed(2)}
           </span>
+
         </div>
 
+        {/* ----------------------------------- */}
         {/* Payment */}
+        {/* ----------------------------------- */}
+
         <div
           className="
             mt-6
@@ -407,7 +513,10 @@ function GSTReceipt({ order, merchant }) {
 
         </div>
 
+        {/* ----------------------------------- */}
         {/* Footer */}
+        {/* ----------------------------------- */}
+
         <div
           className="
             mt-6
@@ -431,20 +540,27 @@ function GSTReceipt({ order, merchant }) {
 
       </div>
 
-      {/* Print CSS */}
+      {/* ===================================== */}
+      {/* PRINT CSS */}
+      {/* ===================================== */}
+
       <style>
         {`
           @media print {
 
             @page {
-              size: A4;
-              margin: 10mm;
+              size: A4 portrait;
+              margin: 8mm;
             }
 
+            html,
             body {
               margin: 0 !important;
               padding: 0 !important;
+              width: 100% !important;
+              min-height: 100% !important;
               background: white !important;
+              overflow: visible !important;
             }
 
             body * {
@@ -460,29 +576,41 @@ function GSTReceipt({ order, merchant }) {
               position: absolute !important;
               left: 0 !important;
               top: 0 !important;
+
               width: 100% !important;
               max-width: 100% !important;
+
               margin: 0 !important;
-              padding: 10mm !important;
+              padding: 8mm !important;
+
+              background: white !important;
               box-shadow: none !important;
               border-radius: 0 !important;
-              background: white !important;
+
+              page-break-before: avoid !important;
+              page-break-after: avoid !important;
+              page-break-inside: avoid !important;
             }
 
+            .gst-receipt-print > * {
+              page-break-inside: avoid !important;
+            }
+
+            .gst-receipt-wrapper {
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+
+            button,
             .print\\:hidden {
               display: none !important;
-            }
-
-            html,
-            body {
-              width: 100% !important;
-              min-height: 100% !important;
-              overflow: visible !important;
             }
           }
         `}
       </style>
-    </>
+
+    </div>
   );
 }
 
