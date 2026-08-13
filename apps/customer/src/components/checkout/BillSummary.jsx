@@ -1,26 +1,42 @@
 import { useSelector } from "react-redux";
 
-function BillSummary({ taxConfig }) {
+function BillSummary({
+  taxConfig,
+  discountAmount = 0,
+  couponCode = "",
+}) {
   const cartItems = useSelector((state) => state.cart.items);
 
   const subtotal = cartItems.reduce((total, item) => {
     return total + item.price * item.quantity;
   }, 0);
 
-  const cgst = subtotal * ((taxConfig?.cgstPercent || 0) / 100);
-  const sgst = subtotal * ((taxConfig?.sgstPercent || 0) / 100);
-  const total = subtotal + cgst + sgst;
+  // Coupon discount is calculated by backend from subtotal
+  const discount = Math.min(discountAmount || 0, subtotal);
+
+  const taxableAmount = subtotal - discount;
+
+  const cgst =
+    taxableAmount * ((taxConfig?.cgstPercent || 0) / 100);
+
+  const sgst =
+    taxableAmount * ((taxConfig?.sgstPercent || 0) / 100);
+
+  const total = taxableAmount + cgst + sgst;
 
   return (
     <div>
-      <h3 className="text-xl font-bold text-[#4B2E1F] mb-5">
+      {/* Header */}
+      <h3 className="mb-5 text-xl font-bold text-[#4B2E1F]">
         Bill Summary
       </h3>
 
+      {/* Breakdown */}
       <div className="space-y-3">
 
-        <div className="flex justify-between items-center">
-          <span className="text-[#6B5A4A] font-medium">
+        {/* Subtotal */}
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-[#6B5A4A]">
             Subtotal
           </span>
 
@@ -29,8 +45,44 @@ function BillSummary({ taxConfig }) {
           </span>
         </div>
 
-        <div className="flex justify-between items-center">
-          <span className="text-[#6B5A4A] font-medium">
+        {/* Coupon */}
+        {discount > 0 && (
+          <div className="flex items-center justify-between">
+
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="font-medium text-[#6B5A4A]">
+                Coupon
+              </span>
+
+              {couponCode && (
+                <span
+                  className="
+                    max-w-[160px]
+                    truncate
+                    rounded-full
+                    bg-green-50
+                    px-2.5
+                    py-1
+                    text-xs
+                    font-semibold
+                    text-green-700
+                  "
+                >
+                  {couponCode}
+                </span>
+              )}
+            </div>
+
+            <span className="font-semibold text-green-600">
+              -₹{discount.toFixed(2)}
+            </span>
+
+          </div>
+        )}
+
+        {/* CGST */}
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-[#6B5A4A]">
             CGST ({taxConfig?.cgstPercent || 0}%)
           </span>
 
@@ -39,8 +91,9 @@ function BillSummary({ taxConfig }) {
           </span>
         </div>
 
-        <div className="flex justify-between items-center">
-          <span className="text-[#6B5A4A] font-medium">
+        {/* SGST */}
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-[#6B5A4A]">
             SGST ({taxConfig?.sgstPercent || 0}%)
           </span>
 
@@ -51,32 +104,55 @@ function BillSummary({ taxConfig }) {
 
       </div>
 
+      {/* Divider */}
       <hr className="my-5 border-[#E7D8C7]" />
 
-      <div className="rounded-2xl bg-[#FFF4E8] border border-[#E7D8C7] p-4">
+      {/* Grand Total */}
+      <div
+        className="
+          rounded-2xl
+          border
+          border-[#E7D8C7]
+          bg-[#FFF4E8]
+          p-4
+          transition-shadow
+          duration-200
+          hover:shadow-sm
+        "
+      >
+        <div className="flex items-center justify-between gap-4">
 
-        <div className="flex justify-between items-center">
+          <div className="min-w-0">
 
-          <div>
-            <p className="text-[#6B5A4A] font-medium">
+            <p className="font-medium text-[#6B5A4A]">
               Grand Total
             </p>
 
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-gray-500">
               Includes applicable GST
             </p>
+
           </div>
 
-          <span className="text-2xl font-bold text-[#6F4E37]">
+          <span
+            className="
+              shrink-0
+              text-2xl
+              font-bold
+              tracking-tight
+              text-[#6F4E37]
+            "
+          >
             ₹{total.toFixed(2)}
           </span>
 
         </div>
-
       </div>
 
-      <p className="text-xs text-gray-500 mt-4">
-        GST is calculated according to the merchant's configured tax rates.
+      {/* Tax note */}
+      <p className="mt-4 text-xs leading-5 text-gray-500">
+        GST is calculated according to the merchant's
+        configured tax rates.
       </p>
     </div>
   );

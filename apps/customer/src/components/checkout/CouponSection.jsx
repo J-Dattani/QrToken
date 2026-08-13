@@ -1,56 +1,294 @@
-function CouponSection() {
+import { useState } from "react";
+import {
+  TextField,
+  Button,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
+
+function CouponSection({
+  merchantId,
+  subtotal,
+  onCouponApplied,
+  onCouponRemoved,
+}) {
+  const [couponCode, setCouponCode] = useState("");
+  const [applied, setApplied] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+
+    if (!code) {
+      setError("Please enter a coupon code.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "https://qrcode-ac0d.onrender.com/api/orders/validate-coupon",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            merchantId,
+            couponCode: code,
+            subtotal,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.valid) {
+        setApplied(false);
+        setError(data.message || "Invalid coupon code.");
+        onCouponRemoved();
+        return;
+      }
+
+      // Coupon successfully validated
+      setCouponCode(code);
+      setApplied(true);
+
+      onCouponApplied({
+        ...data.coupon,
+        discountAmount: data.discountAmount,
+      });
+    } catch (error) {
+      console.error("Coupon validation error:", error);
+
+      setApplied(false);
+      setError("Failed to validate coupon. Please try again.");
+
+      onCouponRemoved();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode("");
+    setApplied(false);
+    setError("");
+
+    onCouponRemoved();
+  };
+
+  const handleCouponChange = (e) => {
+    const value = e.target.value.toUpperCase();
+
+    setCouponCode(value);
+    setError("");
+
+    // Editing an applied coupon removes its applied state
+    if (applied) {
+      setApplied(false);
+      onCouponRemoved();
+    }
+  };
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-5">
+
+      {/* Header */}
+      <div className="mb-5 flex items-center justify-between">
+
         <h3 className="text-xl font-bold text-[#4B2E1F]">
           Coupon
         </h3>
 
-        <span className="text-xs font-semibold bg-[#FFF4E6] text-[#C88A13] px-3 py-1 rounded-full">
-          Coming Soon
-        </span>
-      </div>
-
-      <div className="flex gap-3">
-
-        <input
-          type="text"
-          placeholder="Enter coupon code"
-          disabled
+        <span
           className="
-            flex-1
-            rounded-xl
-            border
-            border-[#E7D8C7]
-            bg-[#F8F5F1]
-            px-4
-            py-3
-            text-gray-400
-            cursor-not-allowed
-            outline-none
-          "
-        />
-
-        <button
-          disabled
-          className="
-            rounded-xl
-            bg-gray-300
-            px-5
-            py-3
+            rounded-full
+            bg-[#FFF4E6]
+            px-3
+            py-1
+            text-xs
             font-semibold
-            text-white
-            cursor-not-allowed
+            text-[#C88A13]
           "
         >
-          Apply
-        </button>
+          Save More
+        </span>
 
       </div>
 
-      <p className="mt-3 text-sm text-gray-500">
-        Coupons will be available in a future update.
-      </p>
+      {/* Input + Apply */}
+      <div className="flex gap-3">
+
+        <TextField
+          fullWidth
+          size="small"
+          value={couponCode}
+          onChange={handleCouponChange}
+          placeholder="Enter coupon code"
+          disabled={loading}
+          error={Boolean(error)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && couponCode.trim() && !loading) {
+              handleApplyCoupon();
+            }
+          }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "12px",
+              backgroundColor: "#FFFFFF",
+
+              "& fieldset": {
+                borderColor: "#E7D8C7",
+              },
+
+              "&:hover fieldset": {
+                borderColor: "#C8A98D",
+              },
+
+              "&.Mui-focused fieldset": {
+                borderColor: "#6F4E37",
+                borderWidth: "1.5px",
+              },
+
+              "&.Mui-error fieldset": {
+                borderColor: "#DC2626",
+              },
+            },
+
+            "& input": {
+              color: "#4B2E1F",
+              fontWeight: 500,
+            },
+
+            "& input::placeholder": {
+              color: "#A68A78",
+              opacity: 1,
+            },
+          }}
+        />
+
+        <Button
+          type="button"
+          variant="contained"
+          disabled={loading || !couponCode.trim()}
+          onClick={handleApplyCoupon}
+          sx={{
+            minWidth: "95px",
+            borderRadius: "12px",
+            backgroundColor: "#6F4E37",
+            color: "#FFFFFF",
+            fontWeight: 600,
+            textTransform: "none",
+            boxShadow: "none",
+
+            "&:hover": {
+              backgroundColor: "#5A3E2B",
+              boxShadow: "none",
+            },
+
+            "&:active": {
+              transform: "scale(0.97)",
+            },
+
+            "&.Mui-disabled": {
+              backgroundColor: "#D6CEC7",
+              color: "#FFFFFF",
+            },
+          }}
+        >
+          {loading ? (
+            <CircularProgress
+              size={20}
+              thickness={4}
+              sx={{ color: "#FFFFFF" }}
+            />
+          ) : (
+            "Apply"
+          )}
+        </Button>
+
+      </div>
+
+      {/* Error */}
+      {error && (
+        <Alert
+          severity="error"
+          variant="outlined"
+          sx={{
+            mt: 2,
+            borderRadius: "12px",
+            backgroundColor: "#FFF7F7",
+            fontSize: "0.875rem",
+            alignItems: "center",
+          }}
+        >
+          {error}
+        </Alert>
+      )}
+
+      {/* Applied Coupon */}
+      {applied && !error && (
+        <div
+          className="
+            mt-3
+            flex
+            items-center
+            justify-between
+            rounded-xl
+            border
+            border-green-200
+            bg-green-50
+            px-4
+            py-3
+          "
+        >
+          <div className="flex items-center gap-2">
+
+            <div
+              className="
+                flex
+                h-6
+                w-6
+                items-center
+                justify-center
+                rounded-full
+                bg-green-600
+                text-xs
+                font-bold
+                text-white
+              "
+            >
+              ✓
+            </div>
+
+            <p className="text-sm font-semibold text-green-700">
+              Coupon {couponCode} applied
+            </p>
+
+          </div>
+
+          <button
+            type="button"
+            onClick={handleRemoveCoupon}
+            className="
+              text-sm
+              font-semibold
+              text-red-600
+              transition
+              hover:text-red-700
+              active:scale-95
+              cursor-pointer
+            "
+          >
+            Remove
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { TextField } from "@mui/material";
+
 function CustomerDetails({
   customerName,
   setCustomerName,
@@ -8,93 +10,134 @@ function CustomerDetails({
 }) {
   return (
     <div>
-      <h3 className="text-xl font-bold text-[#4B2E1F] mb-5">
+      <h3 className="mb-5 text-xl font-bold text-[#4B2E1F]">
         Customer Details
       </h3>
 
       {/* Name */}
       <div className="mb-5">
-        <label className="block mb-2 text-sm font-medium text-[#5E4632]">
-          Full Name
-        </label>
-
-        <input
-          type="text"
+        <TextField
+          fullWidth
+          label="Full Name"
           placeholder="Enter your name"
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
-          className="
-            w-full
-            rounded-xl
-            border
-            border-[#E7D8C7]
-            bg-[#FFFDFC]
-            px-4
-            py-3
-            outline-none
-            transition
-            focus:border-[#8B5E3C]
-            focus:ring-2
-            focus:ring-[#E8D3BF]
-          "
+          variant="outlined"
+          size="medium"
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "12px",
+              backgroundColor: "#FFFDFC",
+
+              "& fieldset": {
+                borderColor: "#E7D8C7",
+              },
+
+              "&:hover fieldset": {
+                borderColor: "#C8A98D",
+              },
+
+              "&.Mui-focused fieldset": {
+                borderColor: "#8B5E3C",
+                borderWidth: "1.5px",
+              },
+            },
+
+            "& .MuiInputLabel-root": {
+              color: "#5E4632",
+            },
+
+            "& .MuiInputLabel-root.Mui-focused": {
+              color: "#8B5E3C",
+            },
+          }}
         />
       </div>
 
       {/* Phone */}
       <div className="mb-5">
-        <label className="block mb-2 text-sm font-medium text-[#5E4632]">
-          Phone Number
-        </label>
-
-        <input
-          type="tel"
-          maxLength={10}
+        <TextField
+          fullWidth
+          label="Phone Number"
           placeholder="9876543210"
+          type="tel"
           value={customerPhone}
           onChange={(e) => setCustomerPhone(e.target.value)}
-          className="
-            w-full
-            rounded-xl
-            border
-            border-[#E7D8C7]
-            bg-[#FFFDFC]
-            px-4
-            py-3
-            outline-none
-            transition
-            focus:border-[#8B5E3C]
-            focus:ring-2
-            focus:ring-[#E8D3BF]
-          "
+          slotProps={{
+            htmlInput: {
+              maxLength: 10,
+              inputMode: "numeric",
+            },
+          }}
+          variant="outlined"
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "12px",
+              backgroundColor: "#FFFDFC",
+
+              "& fieldset": {
+                borderColor: "#E7D8C7",
+              },
+
+              "&:hover fieldset": {
+                borderColor: "#C8A98D",
+              },
+
+              "&.Mui-focused fieldset": {
+                borderColor: "#8B5E3C",
+                borderWidth: "1.5px",
+              },
+            },
+
+            "& .MuiInputLabel-root": {
+              color: "#5E4632",
+            },
+
+            "& .MuiInputLabel-root.Mui-focused": {
+              color: "#8B5E3C",
+            },
+          }}
         />
       </div>
 
       {/* Notes */}
       <div>
-        <label className="block mb-2 text-sm font-medium text-[#5E4632]">
-          Notes (Optional)
-        </label>
-
-        <textarea
+        <TextField
+          fullWidth
+          multiline
           rows={3}
+          label="Notes (Optional)"
           placeholder="Any special instructions..."
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="
-            w-full
-            rounded-xl
-            border
-            border-[#E7D8C7]
-            bg-[#FFFDFC]
-            px-4
-            py-3
-            outline-none
-            resize-none
-            transition
-            focus:border-[#8B5E3C]
-            focus:ring-2
-            focus:ring-[#E8D3BF]
-          "
+          variant="outlined"
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "12px",
+              backgroundColor: "#FFFDFC",
+
+              "& fieldset": {
+                borderColor: "#E7D8C7",
+              },
+
+              "&:hover fieldset": {
+                borderColor: "#C8A98D",
+              },
+
+              "&.Mui-focused fieldset": {
+                borderColor: "#8B5E3C",
+                borderWidth: "1.5px",
+              },
+            },
+
+            "& .MuiInputLabel-root": {
+              color: "#5E4632",
+            },
+
+            "& .MuiInputLabel-root.Mui-focused": {
+              color: "#8B5E3C",
+            },
+          }}
         />
       </div>
     </div>

@@ -1,13 +1,12 @@
-import CustomerRoutes from './routes/CustomerRoutes';
+import CustomerRoutes from "./routes/CustomerRoutes";
+import { ThemeProvider } from "@mui/material/styles";
+import theme from "./theme/theme";
 
 function App() {
   return (
-    
-      // <h1 className="text-5xl font-bold text-orange-500">
-      //   Customer App
-      // </h1>
+    <ThemeProvider theme={theme}>
       <CustomerRoutes />
-  
+    </ThemeProvider>
   );
 }
 

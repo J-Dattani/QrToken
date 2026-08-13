@@ -32,7 +32,15 @@ function OrderSummaryCard({ order }) {
         {order.items.map((item) => (
           <div
             key={item._id}
-            className="flex justify-between items-center border-b border-[#F2E7DA] pb-3 last:border-none"
+            className="
+              flex
+              items-center
+              justify-between
+              border-b
+              border-[#F2E7DA]
+              pb-3
+              last:border-none
+            "
           >
             <div>
               <p className="font-semibold text-[#4B2E1F]">
@@ -68,8 +76,7 @@ function OrderSummaryCard({ order }) {
           </span>
         </div>
 
-        <div className="flex justify-between items-center rounded-xl bg-[#FFF4E8] p-4">
-
+        <div className="flex items-center justify-between rounded-xl bg-[#FFF4E8] p-4">
           <span className="text-lg font-semibold text-[#4B2E1F]">
             Grand Total
           </span>
@@ -77,7 +84,6 @@ function OrderSummaryCard({ order }) {
           <span className="text-2xl font-bold text-[#6F4E37]">
             ₹{order.total.toFixed(2)}
           </span>
-
         </div>
 
       </div>
@@ -85,7 +91,7 @@ function OrderSummaryCard({ order }) {
       {/* Payment */}
       <div className="mt-6 space-y-3">
 
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
 
           <div className="flex items-center gap-2">
             <CreditCard
@@ -98,13 +104,13 @@ function OrderSummaryCard({ order }) {
             </span>
           </div>
 
-          <span className="capitalize font-semibold">
+          <span className="font-semibold capitalize">
             {order.payMode}
           </span>
 
         </div>
 
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
 
           <div className="flex items-center gap-2">
             <CircleDollarSign
@@ -118,7 +124,7 @@ function OrderSummaryCard({ order }) {
           </div>
 
           <span
-            className={`px-3 py-1 rounded-full text-sm font-semibold ${
+            className={`rounded-full px-3 py-1 text-sm font-semibold ${
               order.paymentStatus === "paid"
                 ? "bg-green-100 text-green-700"
                 : "bg-yellow-100 text-yellow-700"
@@ -134,7 +140,7 @@ function OrderSummaryCard({ order }) {
       </div>
 
       {/* Footer */}
-      <div className="mt-6 rounded-xl bg-[#F8F3ED] p-4 flex items-center gap-3">
+      <div className="mt-6 flex items-center gap-3 rounded-xl bg-[#F8F3ED] p-4">
 
         <CircleCheck
           size={22}
