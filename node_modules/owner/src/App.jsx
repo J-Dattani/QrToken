@@ -1,10 +1,12 @@
+import { ThemeProvider } from "@mui/material/styles";
+import theme from "./styles/theme";
+import OwnerRoutes from "./routes/OwnerRoutes";
+
 function App() {
   return (
-    <div className="flex h-screen items-center justify-center bg-slate-100">
-      <h1 className="text-5xl font-bold text-orange-500">
-        Owner App
-      </h1>
-    </div>
+    <ThemeProvider theme={theme}>
+      <OwnerRoutes />
+    </ThemeProvider>
   );
 }
 
