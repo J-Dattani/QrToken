@@ -9,6 +9,13 @@ import ManualEntryPage from "../pages/ManualEntryPage";
 import LiveOrdersPage from "../pages/LiveOrdersPage";
 import KitchenQueuePage from "../pages/KitchenQueuePage";
 import TableSessionsPage from "../pages/TableSessionsPage";
+import CashManagementPage from "../pages/CashManagementPage";
+import CashReconciliationPage from "../pages/CashReconciliationPage";
+import RefundsPage from "../pages/RefundsPage";
+import MenuManagerPage from "../pages/MenuManagerPage";
+import CouponsPage from "../pages/CouponsPage";
+import AnalyticsPage from "../pages/AnalyticsPage";
+import SettingsPage from "../pages/SettingsPage";
 
 function OwnerRoutes() {
   return (
@@ -51,37 +58,37 @@ function OwnerRoutes() {
 
         <Route
           path="cash"
-          element={<Navigate to="/owner/orders" replace />}
+          element={<CashManagementPage />}
         />
 
         <Route
           path="reconciliation"
-          element={<Navigate to="/owner/orders" replace />}
+          element={<CashReconciliationPage />}
         />
 
         <Route
           path="refunds"
-          element={<Navigate to="/owner/orders" replace />}
+          element={<RefundsPage />}
         />
 
         <Route
           path="menu"
-          element={<Navigate to="/owner/orders" replace />}
+          element={<MenuManagerPage/>}
         />
 
         <Route
           path="coupons"
-          element={<Navigate to="/owner/orders" replace />}
+          element={<CouponsPage />}
         />
 
         <Route
           path="analytics"
-          element={<Navigate to="/owner/orders" replace />}
+          element={<AnalyticsPage/>}
         />
 
         <Route
           path="settings"
-          element={<Navigate to="/owner/orders" replace />}
+          element={<SettingsPage />}
         />
 
       </Route>

@@ -56,3 +56,27 @@ button {
   height: 0;
   display: none;
 }
+
+@layer components {
+  .input-style {
+    width: 100%;
+    height: 48px;
+    border: 1px solid #e1d7ca;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 0 14px;
+    font-size: 15px;
+    color: #292725;
+    outline: none;
+    transition: 0.15s ease;
+  }
+
+  .input-style::placeholder {
+    color: #aaa097;
+  }
+
+  .input-style:focus {
+    border-color: #e7a13a;
+    box-shadow: 0 0 0 2px rgba(231, 161, 58, 0.12);
+  }
+}

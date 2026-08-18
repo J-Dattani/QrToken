@@ -1,264 +1,559 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  Search,
   Volume2,
   VolumeX,
   Plus,
-  Check,
-//   Clock3,
-//   Banknote,
+  ChevronRight,
+  X,
+  UserRound,
+  Clock3,
+  CreditCard,
+  Banknote,
+  CheckCircle2,
+  ChefHat,
+  ReceiptText,
+  Printer,
+  ArrowRight,
+  Zap,
+  ShoppingBag,
+  Timer,
+  WalletCards,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
-const orders = [
+const INITIAL_ORDERS = [
   {
     token: "A-023",
     time: "3 min ago",
-    status: "PAID ✓ digital",
-    statusType: "paid",
-    items: "Tea ×2, Samosa ×1",
-    amount: "₹35",
-    action: "Mark Ready",
+    customer: "Guest",
+    orderType: "Counter Takeaway",
+    status: "PREPARING",
+    payment: "PAID",
+    paymentType: "digital",
+    items: [
+      { name: "Tea", qty: 2, price: 10 },
+      { name: "Samosa", qty: 1, price: 15 },
+    ],
+    amount: 35,
   },
+
   {
     token: "A-024",
     time: "2 min ago",
-    status: "CASH ₹24 pending",
-    statusType: "cash",
-    items: "Cutting Chai ×3",
-    amount: "₹24",
-    action: "Mark Ready",
-    secondaryAction: "Collect",
+    customer: "Guest",
+    orderType: "Counter Takeaway",
+    status: "READY",
+    payment: "CASH PENDING",
+    paymentType: "cash",
+    items: [
+      { name: "Cutting Chai", qty: 3, price: 8 },
+    ],
+    amount: 24,
   },
+
   {
     token: "A-025",
     time: "Just now",
-    status: "PAID ✓ digital",
-    statusType: "paid",
-    items: "Biryani ×1, Lassi ×1",
-    amount: "₹180",
-    action: "Mark Preparing",
+    customer: "Guest",
+    orderType: "Counter Takeaway",
+    status: "PREPARING",
+    payment: "PAID",
+    paymentType: "digital",
+    items: [
+      { name: "Biryani", qty: 1, price: 150 },
+      { name: "Lassi", qty: 1, price: 30 },
+    ],
+    amount: 180,
   },
+
   {
     token: "A-026",
     time: "Just now",
-    status: "CASH ₹35 pending",
-    statusType: "cash",
-    items: "Tea ×2, Samosa ×1",
-    amount: "₹35",
-    action: "Mark Ready",
-    secondaryAction: "Collect",
+    customer: "Guest",
+    orderType: "Counter Takeaway",
+    status: "READY",
+    payment: "CASH PENDING",
+    paymentType: "cash",
+    items: [
+      { name: "Tea", qty: 2, price: 10 },
+      { name: "Samosa", qty: 1, price: 15 },
+    ],
+    amount: 35,
   },
+
   {
     token: "A-022",
     time: "6 min ago",
-    status: "PAID ✓ digital",
-    statusType: "paid",
-    items: "Bun Maska ×2",
-    amount: "₹16",
-    action: "Mark Collected",
+    customer: "Guest",
+    orderType: "Counter Takeaway",
+    status: "READY",
+    payment: "PAID",
+    paymentType: "digital",
+    items: [
+      { name: "Bun Maska", qty: 2, price: 8 },
+    ],
+    amount: 16,
   },
 ];
 
 function LiveOrdersPage() {
   const navigate = useNavigate();
-  const [soundOn, setSoundOn] = useState(true);
-  const [activeOrders, setActiveOrders] = useState(orders);
 
-  const handleAction = (token, action) => {
-    if (action === "Collect" || action === "Mark Collected") {
-      setActiveOrders((current) =>
-        current.filter((order) => order.token !== token)
+  const [soundOn, setSoundOn] = useState(true);
+  const [orders, setOrders] = useState(INITIAL_ORDERS);
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [paymentFilter, setPaymentFilter] = useState("ALL");
+
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  /*
+   * ----------------------------------------------------
+   * FILTERED ORDERS
+   * ----------------------------------------------------
+   */
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const query = search.toLowerCase().trim();
+
+      const matchesSearch =
+        !query ||
+        order.token.toLowerCase().includes(query) ||
+        order.customer.toLowerCase().includes(query) ||
+        order.items.some((item) =>
+          item.name.toLowerCase().includes(query)
+        );
+
+      const matchesStatus =
+        statusFilter === "ALL" ||
+        order.status === statusFilter;
+
+      const matchesPayment =
+        paymentFilter === "ALL" ||
+        order.paymentType === paymentFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesPayment
       );
-    }
+    });
+  }, [
+    orders,
+    search,
+    statusFilter,
+    paymentFilter,
+  ]);
+
+  /*
+   * ----------------------------------------------------
+   * ORDER ACTION
+   * ----------------------------------------------------
+   */
+
+  const handleOrderAction = (token) => {
+    setOrders((current) => {
+      return current
+        .map((order) => {
+          if (order.token !== token) {
+            return order;
+          }
+
+          /*
+           * PREPARING → READY
+           */
+          if (order.status === "PREPARING") {
+            return {
+              ...order,
+              status: "READY",
+            };
+          }
+
+          /*
+           * READY + CASH → COLLECTED
+           */
+          if (
+            order.status === "READY" &&
+            order.paymentType === "cash"
+          ) {
+            return null;
+          }
+
+          /*
+           * READY + PAID → COMPLETED
+           */
+          if (
+            order.status === "READY" &&
+            order.paymentType === "digital"
+          ) {
+            return null;
+          }
+
+          return order;
+        })
+        .filter(Boolean);
+    });
+
+    setSelectedOrder(null);
   };
 
-  return (
-    <section className="min-h-screen bg-[#F7F3ED] px-6 py-6 lg:px-8">
+  /*
+   * ----------------------------------------------------
+   * DETAILS MODAL ACTION
+   * ----------------------------------------------------
+   */
 
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-5">
+  const handleDetailsAdvance = () => {
+    if (!selectedOrder) return;
+
+    handleOrderAction(selectedOrder.token);
+  };
+
+  /*
+   * ----------------------------------------------------
+   * ACTION CONFIG
+   * ----------------------------------------------------
+   */
+
+  const getActionConfig = (order) => {
+    if (order.status === "PREPARING") {
+      return {
+        label: "Ready",
+        icon: CheckCircle2,
+        type: "ready",
+      };
+    }
+
+    if (
+      order.status === "READY" &&
+      order.paymentType === "cash"
+    ) {
+      return {
+        label: "Collect",
+        icon: Banknote,
+        type: "collect",
+      };
+    }
+
+    return {
+      label: "Complete",
+      icon: CheckCircle2,
+      type: "complete",
+    };
+  };
+
+  /*
+   * ----------------------------------------------------
+   * QUEUE COUNTS
+   * ----------------------------------------------------
+   */
+
+  const preparingCount = orders.filter(
+    (order) => order.status === "PREPARING"
+  ).length;
+
+  const readyCount = orders.filter(
+    (order) => order.status === "READY"
+  ).length;
+
+  const receivedCount = 0;
+
+  /*
+   * ----------------------------------------------------
+   * UI
+   * ----------------------------------------------------
+   */
+
+  return (
+    <section className="min-h-screen bg-[#F7F3ED] px-4 py-5 text-[#241F1A] lg:px-7">
+
+      {/* =================================================
+          PAGE INTRO
+      ================================================= */}
+
+      <div className="mb-5 flex items-end justify-between gap-4">
 
         <div>
-          <h1 className="text-[23px] font-semibold text-[#241F1A]">
-            Live Orders
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8A7C6C]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#C77C1F]" />
+            Today's service
+          </div>
+
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#201C18]">
+            Live Orders 
           </h1>
 
-          <p className="mt-1 text-sm text-[#766A5D]">
-            Saturday, 18 July · Updating in real time
+          <p className="mt-0.5 text-[12px] text-[#8A7C6C]">
+            Monitor incoming tokens and kitchen progress in real time.
           </p>
         </div>
 
-        <div className="flex gap-2.5">
+        <div className="hidden items-center gap-2 sm:flex">
+
+          <div className="flex items-center gap-2 rounded-lg border border-[#E4D8C9] bg-white px-3 py-2">
+            <Zap
+              size={14}
+              className="text-[#C77C1F]"
+            />
+
+            <div className="leading-tight">
+              <p className="text-[10px] uppercase tracking-[0.08em] text-[#9A8D7D]">
+                Shift performance
+              </p>
+
+              <p className="text-xs font-semibold text-[#2A241E]">
+                ↑ 18%
+              </p>
+            </div>
+          </div>
 
           <button
             type="button"
             onClick={() => setSoundOn((value) => !value)}
-            className="flex items-center gap-2 rounded-lg border border-[#E5D8C8] bg-white px-4 py-2 text-sm font-semibold text-[#2B241E] transition hover:-translate-y-0.5 hover:shadow-sm"
+            className="flex h-9 items-center gap-2 rounded-lg border border-[#E4D8C9] bg-white px-3 text-xs font-medium text-[#40382F] transition hover:border-[#CDBA9E] hover:shadow-sm"
           >
             {soundOn ? (
-              <Volume2 size={16} />
+              <Volume2 size={15} />
             ) : (
-              <VolumeX size={16} />
+              <VolumeX size={15} />
             )}
 
-            {soundOn ? "Sound on" : "Sound off"}
+            Sound
           </button>
-<button
-  type="button"
-  onClick={() => navigate("/owner/manual")}
-  className="flex items-center gap-2 rounded-xl bg-[#282521] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1D1B18]"
->
-      <Plus size={16} />
-   Manual order
-</button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/owner/manual")}
+            className="flex h-9 items-center gap-2 rounded-lg bg-[#282521] px-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#181614]"
+          >
+            <Plus size={15} />
+            Manual order
+          </button>
 
         </div>
-
       </div>
 
-      {/* KPI Strip */}
-      <div className="mb-6 grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
 
-        <KpiCard
+      {/* =================================================
+          KPI STRIP
+      ================================================= */}
+
+      <div className="mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-[#E4D8C9] bg-white lg:grid-cols-4">
+
+        <Metric
+          icon={ShoppingBag}
           label="Orders today"
           value="142"
-          sub="↑ 18% vs yesterday"
+          sub="+18% vs yesterday"
         />
 
-        <KpiCard
-          label="Revenue today"
+        <Metric
+          icon={WalletCards}
+          label="Revenue"
           value="₹4,820"
-          sub="Digital ₹3,180 · Cash ₹1,640"
+          sub="₹3,180 digital"
         />
 
-        <KpiCard
-          label="Avg wait time"
+        <Metric
+          icon={Timer}
+          label="Average wait"
           value="3.4 min"
-          sub="Token to Ready"
+          sub="Token → ready"
         />
 
-        <KpiCard
-          label="Pending collection"
+        <Metric
+          icon={Banknote}
+          label="Cash pending"
           value="₹340"
-          sub="4 orders awaiting cash"
+          sub="4 orders"
         />
 
       </div>
 
-      {/* Active Orders */}
-      <div className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#766A5D]">
-        Active now{" "}
-        <span className="font-mono normal-case tracking-normal text-[#A59A8C]">
-          · {activeOrders.length} orders
-        </span>
-      </div>
 
-      {activeOrders.length > 0 ? (
+      {/* =================================================
+          MAIN CONTENT
+      ================================================= */}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_270px]">
 
-          {activeOrders.map((order) => (
+        {/* =================================================
+            QUEUE
+        ================================================= */}
 
-            <div
-              key={order.token}
-              className="overflow-hidden rounded-2xl border border-[#E5D8C8] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
+        <div className="min-w-0">
 
-              {/* Token */}
-              <div className="flex items-center justify-between border-b border-[#F0E8DE] px-5 py-4">
+          {/* Queue toolbar */}
 
-                <div className="font-mono text-2xl font-bold text-[#2B2823]">
-                  {order.token}
-                </div>
+          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
 
-                <div className="text-xs text-[#8B8074]">
-                  {order.time}
-                </div>
+            <div className="flex items-center gap-2">
 
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#282521] text-white">
+                <Zap size={15} />
               </div>
 
-              {/* Body */}
-              <div className="p-5">
+              <div>
+                <h2 className="text-xs font-semibold text-[#28231E]">
+                  Live queue
+                </h2>
 
-                <div className="mb-4 flex items-center justify-between">
-
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                      order.statusType === "paid"
-                        ? "bg-[#E4F3EE] text-[#1F6E5C]"
-                        : "bg-[#FBEFD2] text-[#A66A08]"
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-
-                  <span className="text-lg font-bold text-[#2B241E]">
-                    {order.amount}
-                  </span>
-
-                </div>
-
-                <p className="mb-5 text-sm text-[#6B6258]">
-                  {order.items}
+                <p className="text-[10px] text-[#958879]">
+                  {filteredOrders.length} orders visible
                 </p>
-
-                <div className="flex gap-2">
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleAction(order.token, order.action)
-                    }
-                    className="flex-1 rounded-lg bg-[#2B2823] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1D1B18]"
-                  >
-                    {order.action}
-                  </button>
-
-                  {order.secondaryAction && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleAction(
-                          order.token,
-                          order.secondaryAction
-                        )
-                      }
-                      className="rounded-lg border border-[#E5D8C8] bg-white px-4 py-2.5 text-sm font-semibold text-[#2B241E] transition hover:bg-[#FFF6E9]"
-                    >
-                      {order.secondaryAction}
-                    </button>
-                  )}
-
-                </div>
-
               </div>
 
             </div>
 
-          ))}
 
-        </div>
+            {/* Status tabs */}
 
-      ) : (
+            <div className="flex items-center rounded-lg border border-[#E4D8C9] bg-white p-0.5">
 
-        <div className="rounded-2xl border border-[#E5D8C8] bg-white p-12 text-center shadow-sm">
+              {[
+                ["ALL", "All"],
+                ["PREPARING", "Preparing"],
+                ["READY", "Ready"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setStatusFilter(value)}
+                  className={`rounded-md px-3 py-1.5 text-[11px] font-medium transition ${
+                    statusFilter === value
+                      ? "bg-[#282521] text-white shadow-sm"
+                      : "text-[#74695D] hover:bg-[#F5EFE7]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
 
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F3E2C4]">
-            <Check
-              size={28}
-              className="text-[#C77C1F]"
-            />
+            </div>
+
           </div>
 
-          <h2 className="text-lg font-semibold text-[#2B241E]">
-            All caught up
-          </h2>
 
-          <p className="mt-1 text-sm text-[#766A5D]">
-            No active orders right now — new tokens will appear here instantly.
-          </p>
+          {/* Search */}
+
+          <div className="mb-2.5 flex gap-2">
+
+            <div className="relative min-w-0 flex-1">
+
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9D9183]"
+              />
+
+              <input
+                type="text"
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Search token or item..."
+                className="h-9 w-full rounded-lg border border-[#E4D8C9] bg-white pl-9 pr-10 text-xs text-[#2A241E] outline-none transition placeholder:text-[#A79B8E] focus:border-[#C88A32] focus:ring-2 focus:ring-[#C88A32]/10"
+              />
+
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-[#E5DACC] px-1.5 py-0.5 text-[9px] text-[#A19587]">
+                /
+              </span>
+
+            </div>
+
+
+            {/* Payment filter */}
+
+            <select
+              value={paymentFilter}
+              onChange={(event) =>
+                setPaymentFilter(event.target.value)
+              }
+              className="h-9 rounded-lg border border-[#E4D8C9] bg-white px-3 text-[11px] font-medium text-[#5F554B] outline-none focus:border-[#C88A32]"
+            >
+              <option value="ALL">
+                All payments
+              </option>
+
+              <option value="digital">
+                Digital
+              </option>
+
+              <option value="cash">
+                Cash
+              </option>
+            </select>
+
+          </div>
+
+
+          {/* =================================================
+              ORDER LIST
+          ================================================= */}
+
+          {filteredOrders.length > 0 ? (
+
+            <div className="overflow-hidden rounded-xl border border-[#E4D8C9] bg-white">
+
+              {filteredOrders.map((order, index) => (
+
+                <OrderRow
+                  key={order.token}
+                  order={order}
+                  isLast={
+                    index === filteredOrders.length - 1
+                  }
+                  actionConfig={getActionConfig(order)}
+                  onAction={() =>
+                    handleOrderAction(order.token)
+                  }
+                  onDetails={() =>
+                    setSelectedOrder(order)
+                  }
+                />
+
+              ))}
+
+            </div>
+
+          ) : (
+
+            <EmptyState />
+
+          )}
 
         </div>
+
+
+        {/* =================================================
+            SERVICE PULSE
+        ================================================= */}
+
+        <ServicePulse
+          active={orders.length}
+          received={receivedCount}
+          preparing={preparingCount}
+          ready={readyCount}
+        />
+
+      </div>
+
+
+      {/* =================================================
+          ORDER DETAILS MODAL
+      ================================================= */}
+
+      {selectedOrder && (
+
+        <OrderDetailsModal
+          order={selectedOrder}
+          actionConfig={getActionConfig(selectedOrder)}
+          onClose={() => setSelectedOrder(null)}
+          onAdvance={handleDetailsAdvance}
+        />
 
       )}
 
@@ -266,26 +561,742 @@ function LiveOrdersPage() {
   );
 }
 
-function KpiCard({ label, value, sub }) {
+
+/* =========================================================
+   METRIC
+========================================================= */
+
+function Metric({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-[#E5D8C8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div className="relative flex items-center gap-3 border-b border-[#EDE4DA] px-4 py-3 lg:border-b-0 lg:border-r last:border-r-0">
 
-      <div className="absolute left-0 right-0 top-0 h-[3px] bg-gradient-to-r from-[#C77C1F] to-[#E0A758]" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F8EBD8] text-[#B96F18]">
+        <Icon size={15} />
+      </div>
 
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#766A5D]">
+      <div className="min-w-0">
+
+        <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-[#9A8D7E]">
+          {label}
+        </p>
+
+        <p className="mt-0.5 text-[18px] font-semibold tracking-tight text-[#27221D]">
+          {value}
+        </p>
+
+        <p className="truncate text-[10px] text-[#958879]">
+          {sub}
+        </p>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   ORDER ROW
+========================================================= */
+
+function OrderRow({
+  order,
+  isLast,
+  actionConfig,
+  onAction,
+  onDetails,
+}) {
+  const ActionIcon = actionConfig.icon;
+
+  const statusColor =
+    order.status === "PREPARING"
+      ? "bg-[#FFF0D8] text-[#A76410]"
+      : "bg-[#E4F3EE] text-[#21705E]";
+
+  const accentColor =
+    order.status === "PREPARING"
+      ? "bg-[#D98A1B]"
+      : "bg-[#36A27E]";
+
+  return (
+    <div
+      className={`group relative flex min-h-[78px] items-center gap-3 px-3.5 py-2.5 transition hover:bg-[#FFFCF8] ${
+        !isLast
+          ? "border-b border-[#EEE6DC]"
+          : ""
+      }`}
+    >
+
+      {/* Accent */}
+
+      <div
+        className={`absolute bottom-0 left-0 top-0 w-[3px] ${accentColor}`}
+      />
+
+
+      {/* Token */}
+
+      <button
+        type="button"
+        onClick={onDetails}
+        className="w-[68px] shrink-0 text-left"
+      >
+
+        <p className="font-mono text-[16px] font-semibold tracking-tight text-[#302A24]">
+          {order.token}
+        </p>
+
+        <p className="mt-0.5 text-[10px] text-[#A09588]">
+          {order.time}
+        </p>
+
+      </button>
+
+
+      {/* Order information */}
+
+      <button
+        type="button"
+        onClick={onDetails}
+        className="min-w-0 flex-1 text-left"
+      >
+
+        <p className="truncate text-[11px] font-semibold text-[#373028]">
+          {order.items
+            .map(
+              (item) =>
+                `${item.name} ×${item.qty}`
+            )
+            .join(", ")}
+        </p>
+
+
+        <div className="mt-1.5 flex items-center gap-1.5">
+
+          <span
+            className={`rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide ${
+              order.paymentType === "digital"
+                ? "bg-[#E5F4EF] text-[#21715E]"
+                : "bg-[#FFF0D3] text-[#A5660A]"
+            }`}
+          >
+            {order.payment}
+          </span>
+
+          <span className="text-[#B3A79A]">
+            ·
+          </span>
+
+          <span
+            className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${statusColor}`}
+          >
+            {order.status}
+          </span>
+
+        </div>
+
+      </button>
+
+
+      {/* Mini progress */}
+
+      <div className="hidden w-[125px] items-center gap-1.5 lg:flex">
+
+        <div
+          className={`h-1.5 w-1.5 rounded-full ${
+            order.status === "PREPARING" ||
+            order.status === "READY"
+              ? "bg-[#D88A1A]"
+              : "bg-[#D8CEC2]"
+          }`}
+        />
+
+        <div
+          className={`h-[2px] flex-1 ${
+            order.status === "READY"
+              ? "bg-[#39A47F]"
+              : "bg-[#E6D7C5]"
+          }`}
+        />
+
+        <div
+          className={`h-1.5 w-1.5 rounded-full ${
+            order.status === "READY"
+              ? "bg-[#39A47F]"
+              : "bg-[#D8CEC2]"
+          }`}
+        />
+
+      </div>
+
+
+      {/* Amount */}
+
+      <div className="w-[55px] shrink-0 text-right">
+
+        <p className="text-[13px] font-semibold text-[#302A24]">
+          ₹{order.amount}
+        </p>
+
+        <p className="text-[9px] text-[#A09588]">
+          total
+        </p>
+
+      </div>
+
+
+      {/* SMART ACTION */}
+
+      <button
+        type="button"
+        onClick={onAction}
+        className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[11px] font-semibold transition ${
+          actionConfig.type === "ready"
+            ? "bg-[#F2E1C7] text-[#9C5F0E] hover:bg-[#EBD4B0]"
+            : actionConfig.type === "collect"
+            ? "bg-[#292622] text-white hover:bg-[#171512]"
+            : "bg-[#E4F3EE] text-[#20705C] hover:bg-[#D6EDE5]"
+        }`}
+      >
+        <ActionIcon size={13} />
+
+        <span className="hidden sm:inline">
+          {actionConfig.label}
+        </span>
+      </button>
+
+
+      {/* Details */}
+
+      <button
+        type="button"
+        onClick={onDetails}
+        aria-label={`View ${order.token} details`}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#B2A69A] transition hover:bg-[#F4ECE3] hover:text-[#4B4239]"
+      >
+        <ChevronRight size={16} />
+      </button>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   SERVICE PULSE
+========================================================= */
+
+function ServicePulse({
+  active,
+  received,
+  preparing,
+  ready,
+}) {
+  return (
+    <aside className="overflow-hidden rounded-xl border border-[#302D29] bg-[#282622] text-white shadow-sm">
+
+      {/* Header */}
+
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+
+        <div>
+          <p className="text-[11px] font-semibold">
+            Service pulse
+          </p>
+
+          <p className="mt-0.5 text-[10px] text-white/40">
+            Current shift overview
+          </p>
+        </div>
+
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-white/10 text-[#E6A23C]">
+          <Zap size={14} />
+        </div>
+
+      </div>
+
+
+      {/* Active */}
+
+      <div className="border-b border-white/10 px-4 py-4">
+
+        <p className="text-[10px] uppercase tracking-[0.13em] text-white/40">
+          Active now
+        </p>
+
+        <div className="mt-1 flex items-end gap-2">
+
+          <span className="text-[32px] font-semibold leading-none">
+            {active}
+          </span>
+
+          <span className="mb-1 text-[10px] font-medium text-[#54C29D]">
+            ↗ Live
+          </span>
+
+        </div>
+
+      </div>
+
+
+      {/* Queue */}
+
+      <div className="border-b border-white/10 px-4 py-4">
+
+        <p className="mb-3 text-[10px] uppercase tracking-[0.13em] text-white/40">
+          Queue status
+        </p>
+
+        <QueueStat
+          label="Received"
+          value={received}
+          dot="bg-[#A8A29C]"
+        />
+
+        <QueueStat
+          label="Preparing"
+          value={preparing}
+          dot="bg-[#E2A43A]"
+        />
+
+        <QueueStat
+          label="Ready"
+          value={ready}
+          dot="bg-[#4BB793]"
+        />
+
+      </div>
+
+
+      {/* Payment */}
+
+      <div className="px-4 py-4">
+
+        <p className="mb-3 text-[10px] uppercase tracking-[0.13em] text-white/40">
+          Payment mix
+        </p>
+
+        <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10">
+
+          <div
+            className="bg-[#E6A23C]"
+            style={{ width: "66%" }}
+          />
+
+          <div
+            className="bg-[#54B996]"
+            style={{ width: "34%" }}
+          />
+
+        </div>
+
+        <div className="mt-2 flex justify-between text-[9px]">
+
+          <span className="text-white/50">
+            <span className="mr-1 text-[#E6A23C]">
+              ●
+            </span>
+            Digital <strong className="text-white">
+              66%
+            </strong>
+          </span>
+
+          <span className="text-white/50">
+            <span className="mr-1 text-[#54B996]">
+              ●
+            </span>
+            Cash <strong className="text-white">
+              34%
+            </strong>
+          </span>
+
+        </div>
+
+      </div>
+
+    </aside>
+  );
+}
+
+
+/* =========================================================
+   QUEUE STAT
+========================================================= */
+
+function QueueStat({
+  label,
+  value,
+  dot,
+}) {
+  return (
+    <div className="mb-2.5 flex items-center justify-between last:mb-0">
+
+      <span className="flex items-center gap-2 text-[10px] text-white/65">
+
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${dot}`}
+        />
+
         {label}
-      </p>
 
-      <p className="mt-2 text-[26px] font-bold text-[#2B241E]">
+      </span>
+
+      <span className="text-[10px] font-semibold text-white">
         {value}
-      </p>
+      </span>
 
-      <p className="mt-1 text-xs text-[#8B8074]">
-        {sub}
+    </div>
+  );
+}
+
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+function EmptyState() {
+  return (
+    <div className="rounded-xl border border-dashed border-[#DCCFC0] bg-white px-6 py-14 text-center">
+
+      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F5E8D4] text-[#C77C1F]">
+        <CheckCircle2 size={19} />
+      </div>
+
+      <h3 className="text-sm font-semibold text-[#302A24]">
+        Queue is clear
+      </h3>
+
+      <p className="mt-1 text-[11px] text-[#958879]">
+        No orders match your current filters.
       </p>
 
     </div>
   );
 }
 
-export default LiveOrdersPage;
+
+/* =========================================================
+   ORDER DETAILS MODAL
+========================================================= */
+
+function OrderDetailsModal({
+  order,
+  actionConfig,
+  onClose,
+  onAdvance,
+}) {
+  const ActionIcon = actionConfig.icon;
+
+  const statusColor =
+    order.status === "PREPARING"
+      ? "text-[#B36A0C]"
+      : "text-[#21806A]";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#181512]/55 p-4 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+
+      <div className="w-full max-w-[560px] overflow-hidden rounded-2xl border border-[#E2D6C7] bg-[#FBF9F5] shadow-2xl">
+
+        {/* =================================================
+            MODAL HEADER
+        ================================================= */}
+
+        <div className="flex items-start justify-between border-b border-[#E8DED3] px-5 py-4">
+
+          <div>
+
+            <div className="flex items-center gap-2">
+
+              <h2 className="font-mono text-[18px] font-bold text-[#27221D]">
+                Token #{order.token}
+              </h2>
+
+              <span className="rounded-full bg-[#F3E4CF] px-2 py-0.5 text-[9px] font-semibold text-[#A3630D]">
+                {order.status}
+              </span>
+
+            </div>
+
+            <p className="mt-1 text-[11px] text-[#8D8174]">
+              {order.orderType} · Placed {order.time}
+            </p>
+
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E1D5C6] bg-white text-[#756A5E] transition hover:bg-[#F5EEE6]"
+          >
+            <X size={16} />
+          </button>
+
+        </div>
+
+
+        {/* =================================================
+            CUSTOMER
+        ================================================= */}
+
+        <div className="px-5 pt-4">
+
+          <div className="flex items-center justify-between rounded-xl border border-[#E4B46B] bg-[#FFF8EC] px-3.5 py-3">
+
+            <div className="flex items-center gap-2.5">
+
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F0DFC2] text-[#9D6213]">
+                <UserRound size={15} />
+              </div>
+
+              <div>
+
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#998B7A]">
+                  Customer
+                </p>
+
+                <p className="mt-0.5 text-xs font-semibold text-[#302A24]">
+                  {order.customer}
+                </p>
+
+              </div>
+
+            </div>
+
+            <div className="text-right">
+
+              <p className="text-[9px] uppercase tracking-wide text-[#998B7A]">
+                Order time
+              </p>
+
+              <p className="mt-0.5 flex items-center gap-1 text-[10px] font-medium text-[#5E554C]">
+                <Clock3 size={11} />
+                {order.time}
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* =================================================
+            SUMMARY
+        ================================================= */}
+
+        <div className="px-5 pt-3">
+
+          <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-[#E3D8CA] bg-[#F1EBE2]">
+
+            <SummaryCell
+              icon={ChefHat}
+              label="Status"
+              value={order.status}
+              valueClass={statusColor}
+            />
+
+            <SummaryCell
+              icon={
+                order.paymentType === "cash"
+                  ? Banknote
+                  : CreditCard
+              }
+              label="Payment"
+              value={order.payment}
+              valueClass={
+                order.paymentType === "cash"
+                  ? "text-[#A3630D]"
+                  : "text-[#21806A]"
+              }
+            />
+
+            <SummaryCell
+              icon={ReceiptText}
+              label="Total"
+              value={`₹${order.amount}`}
+              valueClass="text-[#302A24]"
+            />
+
+          </div>
+
+        </div>
+
+
+        {/* =================================================
+            ITEMS
+        ================================================= */}
+
+        <div className="px-5 pt-4">
+
+          <div className="mb-2 flex items-center justify-between">
+
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#766A5E]">
+              Itemized order
+            </p>
+
+            <span className="text-[10px] text-[#A19588]">
+              {order.items.length} line
+              {order.items.length !== 1 ? "s" : ""}
+            </span>
+
+          </div>
+
+
+          <div className="overflow-hidden rounded-xl border border-[#E3D8CA] bg-white">
+
+            <div className="grid grid-cols-[1fr_55px_75px_75px] border-b border-[#ECE3D8] bg-[#FBF8F3] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-[#948779]">
+
+              <span>Item</span>
+              <span>Qty</span>
+              <span>Unit</span>
+              <span className="text-right">
+                Total
+              </span>
+
+            </div>
+
+
+            {order.items.map((item) => (
+
+              <div
+                key={item.name}
+                className="grid grid-cols-[1fr_55px_75px_75px] items-center border-b border-[#F0E8DE] px-3 py-2.5 last:border-0"
+              >
+
+                <span className="text-[11px] font-semibold text-[#342E28]">
+                  {item.name}
+                </span>
+
+                <span className="text-[10px] text-[#62584E]">
+                  ×{item.qty}
+                </span>
+
+                <span className="text-[10px] text-[#62584E]">
+                  ₹{item.price}
+                </span>
+
+                <span className="text-right text-[10px] font-semibold text-[#342E28]">
+                  ₹{item.qty * item.price}
+                </span>
+
+              </div>
+
+            ))}
+
+
+            <div className="flex items-center justify-between border-t border-[#E5DACE] bg-[#FBF8F3] px-3 py-3">
+
+              <span className="text-[10px] font-semibold text-[#6F6458]">
+                Order total
+              </span>
+
+              <span className="text-[15px] font-bold text-[#27221D]">
+                ₹{order.amount}
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* =================================================
+            FOOTER ACTIONS
+        ================================================= */}
+
+        <div className="flex gap-2.5 px-5 py-4">
+
+          <button
+            type="button"
+            onClick={() => {
+              window.print();
+            }}
+            className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg border border-[#DED2C4] bg-white text-[11px] font-semibold text-[#40382F] transition hover:bg-[#F7F1E9]"
+          >
+            <Printer size={14} />
+            Print receipt
+          </button>
+
+
+          <button
+            type="button"
+            onClick={onAdvance}
+            className={`flex h-9 flex-[1.3] items-center justify-center gap-2 rounded-lg px-4 text-[11px] font-semibold transition ${
+              actionConfig.type === "ready"
+                ? "bg-[#C77C1F] text-white hover:bg-[#AD6917]"
+                : actionConfig.type === "collect"
+                ? "bg-[#282521] text-white hover:bg-[#171512]"
+                : "bg-[#217B65] text-white hover:bg-[#196451]"
+            }`}
+          >
+            <ActionIcon size={14} />
+
+            {actionConfig.type === "ready"
+              ? "Advance to Ready"
+              : actionConfig.type === "collect"
+              ? "Collect Payment"
+              : "Complete Order"}
+
+            <ArrowRight size={13} />
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   SUMMARY CELL
+========================================================= */
+
+function SummaryCell({
+  icon: Icon,
+  label,
+  value,
+  valueClass,
+}) {
+  return (
+    <div className="border-r border-[#E1D6C8] px-3 py-2.5 last:border-0">
+
+      <div className="mb-1 flex items-center gap-1.5">
+
+        <Icon
+          size={11}
+          className="text-[#8F8172]"
+        />
+
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8F8172]">
+          {label}
+        </span>
+
+      </div>
+
+      <p
+        className={`truncate text-[10px] font-bold ${valueClass}`}
+      >
+        {value}
+      </p>
+
+    </div>
+  );
+}
+
+export default LiveOrdersPage;  

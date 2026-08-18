@@ -8,6 +8,13 @@ import {
   Trash2,
   X,
   Receipt,
+  Armchair,
+  ArrowUpRight,
+  Check,
+  MoreHorizontal,
+  Utensils,
+  Banknote,
+  LayoutGrid,
 } from "lucide-react";
 
 const initialTables = [
@@ -92,14 +99,16 @@ const initialTables = [
 ];
 
 function TableSessionsPage() {
-  const [tables, setTables] = useState(initialTables);
+  const [tables, setTables] =
+    useState(initialTables);
 
   const [view, setView] = useState("grid");
   const [section, setSection] = useState("All");
   const [status, setStatus] = useState("All Tables");
 
   const [modal, setModal] = useState(null);
-  const [selectedTable, setSelectedTable] = useState(null);
+  const [selectedTable, setSelectedTable] =
+    useState(null);
 
   const [newTable, setNewTable] = useState({
     name: "",
@@ -109,10 +118,12 @@ function TableSessionsPage() {
 
   const filteredTables = tables.filter((table) => {
     const sectionMatch =
-      section === "All" || table.section === section;
+      section === "All" ||
+      table.section === section;
 
     const statusMatch =
-      status === "All Tables" || table.status === status;
+      status === "All Tables" ||
+      table.status === status;
 
     return sectionMatch && statusMatch;
   });
@@ -121,7 +132,19 @@ function TableSessionsPage() {
     (table) => table.status !== "Available"
   ).length;
 
-  const openModal = (type, table = null) => {
+  const availableCount = tables.filter(
+    (table) => table.status === "Available"
+  ).length;
+
+  const totalSeats = tables.reduce(
+    (sum, table) => sum + table.seats,
+    0
+  );
+
+  const openModal = (
+    type,
+    table = null
+  ) => {
     setSelectedTable(table);
     setModal(type);
   };
@@ -136,7 +159,11 @@ function TableSessionsPage() {
 
     const nextId =
       tables.length > 0
-        ? Math.max(...tables.map((table) => table.id)) + 1
+        ? Math.max(
+            ...tables.map(
+              (table) => table.id
+            )
+          ) + 1
         : 1;
 
     setTables((current) => [
@@ -160,12 +187,16 @@ function TableSessionsPage() {
   };
 
   const deleteTable = (tableId) => {
-    const table = tables.find((item) => item.id === tableId);
+    const table = tables.find(
+      (item) => item.id === tableId
+    );
 
     if (!table) return;
 
     if (table.status !== "Available") {
-      alert("Occupied table cannot be deleted.");
+      alert(
+        "Occupied table cannot be deleted."
+      );
       return;
     }
 
@@ -175,26 +206,28 @@ function TableSessionsPage() {
       )
     ) {
       setTables((current) =>
-        current.filter((item) => item.id !== tableId)
+        current.filter(
+          (item) => item.id !== tableId
+        )
       );
     }
   };
 
-  const closeAndVacate = () => {
-    if (!selectedTable) return;
+  const closeAndVacate = (table) => {
+    if (!table) return;
 
     setTables((current) =>
-      current.map((table) =>
-        table.id === selectedTable.id
+      current.map((item) =>
+        item.id === table.id
           ? {
-              ...table,
+              ...item,
               status: "Available",
               token: undefined,
               bill: undefined,
               duration: undefined,
               items: undefined,
             }
-          : table
+          : item
       )
     );
 
@@ -210,260 +243,551 @@ function TableSessionsPage() {
   };
 
   return (
-    <section className="min-h-screen bg-[#F7F3ED] px-6 py-6 lg:px-8">
+    <section className="min-h-screen bg-[#F5F1EA] px-4 py-4 lg:px-6">
 
-      {/* HEADER */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      {/* =====================================================
+          COMMAND HEADER
+      ===================================================== */}
 
-        <div>
-          <h1 className="text-[25px] font-semibold text-[#241F1A]">
-            Table Sessions & Floor Plan
-          </h1>
+      <div className="mb-4">
 
-          <p className="mt-1 text-sm text-[#766A5D]">
-            {occupiedCount} of {tables.length} tables occupied · Add,
-            edit & manage outlet floor plan
-          </p>
-        </div>
+        <div className="flex flex-wrap items-end justify-between gap-4">
 
-        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-3">
 
-          <button
-            type="button"
-            onClick={() => openModal("add")}
-            className="flex items-center gap-2 rounded-xl bg-[#292621] px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#1D1B18]"
-          >
-            <Plus size={16} />
-            Add New Table
-          </button>
+            <div className="flex h-10 w-10 items-center justify-center rounded-[13px] bg-[#282521] text-[#E6A23C] shadow-[0_5px_14px_rgba(35,30,23,0.12)]">
+              <LayoutGrid size={18} />
+            </div>
 
-          <div className="flex overflow-hidden rounded-xl border border-[#E5D8C8] bg-white">
+            <div>
+
+              <div className="flex items-center gap-2">
+
+                <h1 className="text-[20px] font-bold tracking-[-0.025em] text-[#25211D]">
+                  Floor Board
+                </h1>
+
+                <span className="rounded-full bg-[#EAF4EE] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.11em] text-[#188067]">
+                  Table Control
+                </span>
+
+              </div>
+
+              <p className="mt-0.5 text-[10px] text-[#8C8072]">
+                See every table. Open sessions. Close in one tap.
+              </p>
+
+            </div>
+
+          </div>
+
+          <div className="flex items-center gap-2">
 
             <button
               type="button"
-              onClick={() => setView("grid")}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium ${
-                view === "grid"
-                  ? "bg-[#292621] text-white"
-                  : "text-[#5F554B]"
-              }`}
+              onClick={() =>
+                openModal("qrStudio")
+              }
+              className="hidden items-center gap-1.5 rounded-xl border border-[#DED3C5] bg-[#FFFDF9] px-3 py-2 text-[10px] font-bold text-[#5F554B] shadow-[0_2px_7px_rgba(40,30,20,0.035)] transition hover:border-[#D7A05A] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20 sm:flex"
             >
-              <Grid2X2 size={15} />
-              Visual Grid
+              <QrCode size={13} />
+              QR Studio
             </button>
 
             <button
               type="button"
-              onClick={() => setView("list")}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium ${
-                view === "list"
-                  ? "bg-[#292621] text-white"
-                  : "text-[#5F554B]"
-              }`}
+              onClick={() =>
+                openModal("add")
+              }
+              className="flex items-center gap-1.5 rounded-xl bg-[#282521] px-3.5 py-2.5 text-[11px] font-black text-white shadow-[0_5px_14px_rgba(35,30,23,0.16)] transition hover:bg-[#1D1B18] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25"
             >
-              <List size={15} />
-              List View
+              <Plus size={14} />
+              Add Table
             </button>
 
           </div>
 
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-xl border border-[#E5D8C8] bg-white px-4 py-3 text-sm font-semibold text-[#3E372F] hover:bg-[#FFF9F0]"
-          >
-            <QrCode size={15} />
-            Table QR Studio
-          </button>
-
         </div>
+
       </div>
 
-      {/* FILTERS */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+      {/* =====================================================
+          QUICK SNAPSHOT
+      ===================================================== */}
 
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
 
-          <span className="mr-1 text-sm font-medium text-[#4F463D]">
-            Section:
-          </span>
+        <MiniStat
+          icon={Armchair}
+          label="Tables"
+          value={tables.length}
+          detail={`${totalSeats} seats`}
+        />
 
-          {["All", "Indoor Main", "Outdoor Terrace"].map(
-            (item) => (
+        <MiniStat
+          icon={Check}
+          label="Available"
+          value={availableCount}
+          detail="Ready now"
+          positive
+        />
+
+        <MiniStat
+          icon={Utensils}
+          label="Occupied"
+          value={occupiedCount}
+          detail={
+            tables.length
+              ? `${Math.round(
+                  (occupiedCount /
+                    tables.length) *
+                    100
+                )}% of floor`
+              : "0%"
+          }
+        />
+
+        <MiniStat
+          icon={Banknote}
+          label="Cash pending"
+          value={`₹${tables
+            .filter(
+              (table) =>
+                table.status ===
+                "Cash Pending"
+            )
+            .reduce(
+              (sum, table) =>
+                sum + (table.bill || 0),
+              0
+            )}`}
+          detail="Collect at table"
+          warning
+        />
+
+      </div>
+
+      {/* =====================================================
+          FLOOR CONTROLS
+      ===================================================== */}
+
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
+
+        <div className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-xl border border-[#DED3C5] bg-[#EAE4DA] p-1 scrollbar-none">
+
+          {[
+            {
+              label: "All",
+              count: tables.length,
+            },
+            {
+              label: "Indoor Main",
+              count: tables.filter(
+                (table) =>
+                  table.section ===
+                  "Indoor Main"
+              ).length,
+            },
+            {
+              label: "Outdoor Terrace",
+              count: tables.filter(
+                (table) =>
+                  table.section ===
+                  "Outdoor Terrace"
+              ).length,
+            },
+          ].map((item) => {
+
+            const active =
+              section === item.label;
+
+            return (
               <button
-                key={item}
+                key={item.label}
                 type="button"
-                onClick={() => setSection(item)}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                  section === item
-                    ? "border-[#292621] bg-[#292621] text-white"
-                    : "border-[#E5D8C8] bg-white text-[#5F554B] hover:bg-[#FFF8EE]"
+                onClick={() =>
+                  setSection(item.label)
+                }
+                className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[10px] font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20 ${
+                  active
+                    ? "bg-[#282521] text-white shadow-sm"
+                    : "text-[#6F6458] hover:bg-white/70"
                 }`}
               >
-                {item}
+                {item.label}
+
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+                    active
+                      ? "bg-white/10 text-[#E9B85B]"
+                      : "bg-black/5 text-[#9A8D7E]"
+                  }`}
+                >
+                  {item.count}
+                </span>
+
               </button>
-            )
-          )}
+            );
+          })}
 
         </div>
 
         <div className="flex items-center gap-2">
 
-          <span className="text-sm font-medium text-[#4F463D]">
-            Status:
-          </span>
-
           <select
             value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            className="rounded-xl border border-[#E5D8C8] bg-white px-4 py-2.5 text-sm font-medium text-[#332D27] outline-none focus:border-[#D88A22]"
+            onChange={(event) =>
+              setStatus(
+                event.target.value
+              )
+            }
+            className="h-9 rounded-xl border border-[#DED3C5] bg-[#FFFDF9] px-3 text-[10px] font-bold text-[#4E463D] outline-none transition focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
           >
             <option>All Tables</option>
             <option>Available</option>
             <option>Cash Pending</option>
           </select>
 
+          <div className="flex overflow-hidden rounded-xl border border-[#DED3C5] bg-[#FFFDF9]">
+
+            <button
+              type="button"
+              onClick={() =>
+                setView("grid")
+              }
+              className={`flex h-9 w-9 items-center justify-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20 ${
+                view === "grid"
+                  ? "bg-[#282521] text-white"
+                  : "text-[#786C5E] hover:bg-[#F5EFE7]"
+              }`}
+              title="Floor board"
+            >
+              <Grid2X2 size={14} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setView("list")
+              }
+              className={`flex h-9 w-9 items-center justify-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20 ${
+                view === "list"
+                  ? "bg-[#282521] text-white"
+                  : "text-[#786C5E] hover:bg-[#F5EFE7]"
+              }`}
+              title="List view"
+            >
+              <List size={14} />
+            </button>
+
+          </div>
+
         </div>
 
       </div>
 
-      {/* GRID VIEW */}
-      {view === "grid" && (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+      {/* =====================================================
+          FLOOR LEGEND
+      ===================================================== */}
 
-          {filteredTables.map((table) => (
-            <TableCard
-              key={table.id}
-              table={table}
-              onQr={() => openModal("qr", table)}
-              onEdit={() => openModal("edit", table)}
-              onDelete={() => deleteTable(table.id)}
-              onDetails={() => openModal("details", table)}
-              onClose={() => {
-                setSelectedTable(table);
-                closeAndVacate();
-              }}
-            />
-          ))}
+      <div className="mb-3 flex items-center justify-between">
+
+        <div className="flex items-center gap-3">
+
+          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#887B6D]">
+            {section === "All"
+              ? "Entire floor"
+              : section}
+          </span>
+
+          <span className="h-1 w-1 rounded-full bg-[#CFC3B4]" />
+
+          <span className="text-[10px] text-[#9C9082]">
+            {filteredTables.length} tables shown
+          </span>
 
         </div>
+
+        <div className="flex items-center gap-3">
+
+          <Legend
+            dot="bg-[#D8D0C4]"
+            label="Available"
+          />
+
+          <Legend
+            dot="bg-[#E2A33E]"
+            label="Active"
+          />
+
+        </div>
+
+      </div>
+
+      {/* =====================================================
+          FLOOR BOARD
+      ===================================================== */}
+
+      {view === "grid" && (
+
+        <div className="rounded-[18px] border border-[#DED3C5] bg-[#EAE4DA]/65 p-2.5 shadow-[0_4px_18px_rgba(43,33,22,0.035)]">
+
+          <div
+            className="
+              grid
+              grid-cols-2
+              gap-2.5
+              sm:grid-cols-3
+              lg:grid-cols-4
+              xl:grid-cols-5
+              2xl:grid-cols-6
+            "
+          >
+
+            {filteredTables.map(
+              (table) => (
+
+                <FloorTable
+                  key={table.id}
+                  table={table}
+                  onQr={() =>
+                    openModal(
+                      "qr",
+                      table
+                    )
+                  }
+                  onEdit={() =>
+                    openModal(
+                      "edit",
+                      table
+                    )
+                  }
+                  onDelete={() =>
+                    deleteTable(
+                      table.id
+                    )
+                  }
+                  onDetails={() =>
+                    openModal(
+                      "details",
+                      table
+                    )
+                  }
+                  onClose={() =>
+                    closeAndVacate(
+                      table
+                    )
+                  }
+                />
+
+              )
+            )}
+
+          </div>
+
+        </div>
+
       )}
 
-      {/* LIST VIEW */}
+      {/* =====================================================
+          LIST VIEW
+      ===================================================== */}
+
       {view === "list" && (
-        <div className="overflow-hidden rounded-2xl border border-[#E5D8C8] bg-white shadow-sm">
+
+        <div className="overflow-hidden rounded-[18px] border border-[#DED3C5] bg-[#FFFDF9] shadow-[0_5px_18px_rgba(43,33,22,0.05)]">
 
           <div className="overflow-x-auto">
 
-            <table className="w-full min-w-[1000px] text-sm">
+            <table className="w-full min-w-[850px]">
 
               <thead>
-                <tr className="border-b border-[#E5D8C8] text-left text-xs uppercase tracking-wide text-[#766A5D]">
-                  <th className="px-4 py-3">Table Name</th>
-                  <th className="px-4 py-3">Capacity & Section</th>
-                  <th className="px-4 py-3">Active Orders</th>
-                  <th className="px-4 py-3">Duration</th>
-                  <th className="px-4 py-3">Total Bill</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Actions</th>
+
+                <tr className="border-b border-[#E8DED1] bg-[#F6F1E9] text-left">
+
+                  {[
+                    "Table",
+                    "Section",
+                    "Session",
+                    "Bill",
+                    "Status",
+                    "",
+                  ].map(
+                    (heading) => (
+                      <th
+                        key={heading}
+                        className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-[#958879]"
+                      >
+                        {heading}
+                      </th>
+                    )
+                  )}
+
                 </tr>
+
               </thead>
 
               <tbody>
 
-                {filteredTables.map((table) => (
-                  <tr
-                    key={table.id}
-                    className="border-b border-[#EEE5D9] last:border-0"
-                  >
+                {filteredTables.map(
+                  (table) => (
 
-                    <td className="px-4 py-4 font-semibold text-[#2B241E]">
-                      {table.name}
-                    </td>
+                    <tr
+                      key={table.id}
+                      className="group border-b border-[#EEE6DC] last:border-0 hover:bg-[#FFFBF5]"
+                    >
 
-                    <td className="px-4 py-4 text-[#665D53]">
-                      {table.seats} Seats · {table.section}
-                    </td>
+                      <td className="px-4 py-3">
 
-                    <td className="px-4 py-4 text-[#665D53]">
-                      {table.token || "—"}
-                      {table.bill
-                        ? ` (₹${table.bill})`
-                        : ""}
-                    </td>
+                        <div className="flex items-center gap-2.5">
 
-                    <td className="px-4 py-4 font-mono text-[#332D27]">
-                      {table.duration || "—"}
-                    </td>
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg font-mono text-[10px] font-black ${
+                              table.status ===
+                              "Available"
+                                ? "bg-[#F0ECE5] text-[#71665A]"
+                                : "bg-[#FFF0D2] text-[#C67608]"
+                            }`}
+                          >
+                            {table.id}
+                          </div>
 
-                    <td className="px-4 py-4 font-semibold text-[#C87810]">
-                      ₹{table.bill || 0}
-                    </td>
+                          <div>
 
-                    <td className="px-4 py-4">
-                      <StatusBadge status={table.status} />
-                    </td>
+                            <p className="text-[11px] font-black text-[#302A24]">
+                              {table.name}
+                            </p>
 
-                    <td className="px-4 py-4">
+                            <p className="text-[10px] text-[#9A8E81]">
+                              {table.seats} seats
+                            </p>
 
-                      <div className="flex items-center gap-3 whitespace-nowrap">
+                          </div>
 
-                        {table.status !== "Available" ? (
-                          <>
+                        </div>
+
+                      </td>
+
+                      <td className="px-4 py-3 text-[10px] font-medium text-[#71665A]">
+                        {table.section}
+                      </td>
+
+                      <td className="px-4 py-3">
+
+                        {table.token ? (
+                          <div>
+
+                            <p className="font-mono text-[10px] font-bold text-[#302A24]">
+                              {table.token}
+                            </p>
+
+                            <p className="mt-0.5 text-[10px] text-[#9A8E81]">
+                              {table.duration}
+                            </p>
+
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-[#AAA095]">
+                            No active session
+                          </span>
+                        )}
+
+                      </td>
+
+                      <td className="px-4 py-3">
+
+                        <span className="text-[11px] font-black text-[#BE710B]">
+                          {table.bill
+                            ? `₹${table.bill}`
+                            : "—"}
+                        </span>
+
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <StatusBadge
+                          status={
+                            table.status
+                          }
+                        />
+                      </td>
+
+                      <td className="px-4 py-3">
+
+                        <div className="flex items-center justify-end gap-1">
+
+                          {table.status !==
+                          "Available" ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openModal(
+                                    "details",
+                                    table
+                                  )
+                                }
+                                className="flex h-7 items-center gap-1 rounded-lg bg-[#282521] px-2.5 text-[10px] font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
+                              >
+                                Open
+                                <ArrowUpRight
+                                  size={11}
+                                />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  closeAndVacate(
+                                    table
+                                  )
+                                }
+                                className="h-7 rounded-lg border border-[#DED3C5] bg-white px-2.5 text-[10px] font-bold text-[#554C43] hover:bg-[#F8F2E9] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
+                              >
+                                Close
+                              </button>
+                            </>
+                          ) : (
                             <button
                               type="button"
                               onClick={() =>
-                                openModal("details", table)
+                                openModal(
+                                  "qr",
+                                  table
+                                )
                               }
-                              className="font-medium text-[#C87810] hover:underline"
+                              className="flex h-7 items-center gap-1 rounded-lg border border-[#DED3C5] bg-white px-2.5 text-[10px] font-bold text-[#655B50] hover:bg-[#FFF6E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
                             >
-                              Details →
+                              <QrCode
+                                size={11}
+                              />
+                              QR
                             </button>
+                          )}
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedTable(table);
-                                closeAndVacate();
-                              }}
-                              className="font-medium text-[#292621] hover:underline"
-                            >
-                              Close
-                            </button>
-                          </>
-                        ) : (
                           <button
                             type="button"
-                            onClick={() => openModal("qr", table)}
-                            className="font-medium text-[#C87810] hover:underline"
+                            onClick={() =>
+                              openModal(
+                                "edit",
+                                table
+                              )
+                            }
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#8B7D6E] hover:bg-[#F3ECE2] hover:text-[#BD710C] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
                           >
-                            View QR
+                            <MoreHorizontal
+                              size={15}
+                            />
                           </button>
-                        )}
 
-                        <button
-                          type="button"
-                          onClick={() => openModal("edit", table)}
-                          className="flex items-center gap-1 text-[#62584E] hover:text-[#C87810]"
-                        >
-                          <Pencil size={13} />
-                          Edit
-                        </button>
+                        </div>
 
-                        <button
-                          type="button"
-                          onClick={() => deleteTable(table.id)}
-                          className="flex items-center gap-1 text-[#C86A5D] hover:text-red-600"
-                        >
-                          <Trash2 size={13} />
-                          Delete
-                        </button>
+                      </td>
 
-                      </div>
+                    </tr>
 
-                    </td>
-
-                  </tr>
-                ))}
+                  )
+                )}
 
               </tbody>
 
@@ -472,33 +796,53 @@ function TableSessionsPage() {
           </div>
 
         </div>
+
       )}
 
       {/* EMPTY */}
-      {filteredTables.length === 0 && (
-        <div className="rounded-2xl border border-[#E5D8C8] bg-white p-12 text-center">
-          <h2 className="font-semibold text-[#2B241E]">
-            No tables found
-          </h2>
 
-          <p className="mt-1 text-sm text-[#766A5D]">
-            Try changing the section or status filter.
-          </p>
+      {filteredTables.length === 0 && (
+
+        <div className="mt-2 flex min-h-[280px] items-center justify-center rounded-[18px] border border-dashed border-[#D8CCBC] bg-[#FFFDF9]">
+
+          <div className="text-center">
+
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#EEE8DE] text-[#918476]">
+              <Armchair size={20} />
+            </div>
+
+            <p className="text-sm font-bold text-[#51483B]">
+              No tables here
+            </p>
+
+            <p className="mt-1 text-[10px] text-[#9C9082]">
+              Try another section or status filter.
+            </p>
+
+          </div>
+
         </div>
+
       )}
 
-      {/* ADD MODAL */}
+      {/* =====================================================
+          ADD MODAL
+      ===================================================== */}
+
       {modal === "add" && (
+
         <Modal onClose={closeModal}>
 
           <ModalHeader
-            title="+ Add New Table"
+            title="Add Table"
+            subtitle="Create a new place on the floor."
             onClose={closeModal}
           />
 
-          <div className="space-y-5">
+          <div className="mt-5 space-y-4">
 
-            <FormField label="Table Name / Number">
+            <FormField label="Table name">
+
               <input
                 value={newTable.name}
                 onChange={(event) =>
@@ -507,12 +851,14 @@ function TableSessionsPage() {
                     name: event.target.value,
                   })
                 }
-                placeholder="e.g. Table 11 or VIP-1"
-                className="input-style"
+                placeholder="e.g. Table 11"
+                className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
               />
+
             </FormField>
 
-            <FormField label="Seating Capacity">
+            <FormField label="Capacity">
+
               <select
                 value={newTable.seats}
                 onChange={(event) =>
@@ -521,230 +867,296 @@ function TableSessionsPage() {
                     seats: event.target.value,
                   })
                 }
-                className="input-style"
+                className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
               >
-                <option value="2">2 Seats</option>
-                <option value="4">4 Seats (Standard)</option>
-                <option value="6">6 Seats</option>
-                <option value="8">8 Seats</option>
+                <option value="2">
+                  2 seats
+                </option>
+                <option value="4">
+                  4 seats
+                </option>
+                <option value="6">
+                  6 seats
+                </option>
+                <option value="8">
+                  8 seats
+                </option>
               </select>
+
             </FormField>
 
-            <FormField label="Restaurant Section">
+            <FormField label="Section">
+
               <select
                 value={newTable.section}
                 onChange={(event) =>
                   setNewTable({
                     ...newTable,
-                    section: event.target.value,
+                    section:
+                      event.target.value,
                   })
                 }
-                className="input-style"
+                className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
               >
-                <option>Indoor Main</option>
-                <option>Outdoor Terrace</option>
+                <option>
+                  Indoor Main
+                </option>
+                <option>
+                  Outdoor Terrace
+                </option>
               </select>
+
             </FormField>
 
           </div>
 
-          <div className="mt-7 flex gap-3">
+          <ModalActions
+            onCancel={closeModal}
+            primary="Create Table"
+            onPrimary={createTable}
+          />
+
+        </Modal>
+
+      )}
+
+      {/* =====================================================
+          QR MODAL
+      ===================================================== */}
+
+      {modal === "qr" &&
+        selectedTable && (
+
+          <Modal onClose={closeModal}>
+
+            <ModalHeader
+              title={`${selectedTable.name} QR`}
+              subtitle="Customer ordering point"
+              onClose={closeModal}
+            />
+
+            <div className="mt-5 rounded-2xl bg-[#F5F0E8] p-5 text-center">
+
+              <div className="mx-auto flex w-fit rounded-2xl border border-[#DDD1C1] bg-white p-4 shadow-[0_5px_15px_rgba(40,30,20,0.06)]">
+
+                <img
+                  src={getQrUrl(
+                    selectedTable
+                  )}
+                  alt={`${selectedTable.name} QR`}
+                  className="h-[190px] w-[190px]"
+                />
+
+              </div>
+
+              <p className="mt-4 text-[10px] font-bold text-[#51483B]">
+                Scan to open ordering
+              </p>
+
+              <p className="mt-1 break-all text-[10px] text-[#9B8F82]">
+                qrcode-bytsol.vercel.app/demo?table=
+                {selectedTable.id}
+              </p>
+
+            </div>
 
             <button
               type="button"
               onClick={closeModal}
-              className="flex-1 rounded-xl border border-[#E5D8C8] px-4 py-3 font-semibold text-[#332D27]"
+              className="mt-4 w-full rounded-xl bg-[#282521] py-3 text-[11px] font-black text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25"
             >
-              Cancel
+              Done
             </button>
 
-            <button
-              type="button"
-              onClick={createTable}
-              className="flex-1 rounded-xl bg-[#292621] px-4 py-3 font-semibold text-white"
-            >
-              Create Table
-            </button>
+          </Modal>
 
-          </div>
+        )}
 
-        </Modal>
-      )}
+      {/* =====================================================
+          DETAILS MODAL
+      ===================================================== */}
 
-      {/* QR MODAL */}
-      {modal === "qr" && selectedTable && (
-        <Modal onClose={closeModal}>
+      {modal === "details" &&
+        selectedTable && (
 
-          <ModalHeader
-            title={`${selectedTable.name} QR Code`}
+          <Modal
             onClose={closeModal}
-          />
-
-          <p className="text-center text-sm text-[#766A5D]">
-            Scan with phone camera to order & pay
-          </p>
-
-          <div className="mx-auto mt-5 flex w-fit rounded-xl border border-[#E5D8C8] bg-white p-5">
-            <img
-              src={getQrUrl(selectedTable)}
-              alt={`${selectedTable.name} QR`}
-              className="h-[220px] w-[220px]"
-            />
-          </div>
-
-          <p className="mt-5 break-all text-center text-xs text-[#766A5D]">
-            https://qrcode-bytsol.vercel.app/demo?table=
-            {selectedTable.id}
-          </p>
-
-          <button
-            type="button"
-            onClick={closeModal}
-            className="mt-5 w-full rounded-xl bg-[#292621] px-4 py-3 font-semibold text-white"
+            wide
           >
-            Done
-          </button>
 
-        </Modal>
-      )}
+            <ModalHeader
+              title={`${selectedTable.name} Session`}
+              subtitle={`${selectedTable.section} · ${selectedTable.duration}`}
+              onClose={closeModal}
+            />
 
-      {/* SESSION DETAILS */}
-      {modal === "details" && selectedTable && (
-        <Modal onClose={closeModal} wide>
+            <div className="mt-5 rounded-[16px] border border-[#E0D4C5] bg-[#F5F0E8] p-4">
 
-          <ModalHeader
-            title={`${selectedTable.name} Session Details`}
-            onClose={closeModal}
-          />
+              <div className="flex items-center justify-between">
 
-          <p className="text-sm text-[#766A5D]">
-            {selectedTable.section} · Occupied for{" "}
-            {selectedTable.duration}
-          </p>
+                <div>
 
-          <div className="mt-5 rounded-xl bg-[#EEE9DE] p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#96897A]">
+                    Current bill
+                  </p>
 
-            <div className="flex items-center justify-between">
+                  <p className="mt-1 text-[27px] font-black tracking-[-0.04em] text-[#2B261F]">
+                    ₹{selectedTable.bill}
+                  </p>
+
+                </div>
+
+                <StatusBadge
+                  status={
+                    selectedTable.status
+                  }
+                />
+
+              </div>
+
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
 
               <div>
-                <p className="text-xs uppercase text-[#8A8074]">
-                  Total Accumulated Bill
+
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#95897B]">
+                  Active token
                 </p>
 
-                <p className="mt-1 text-2xl font-bold text-[#C87810]">
-                  ₹{selectedTable.bill}
+                <p className="mt-1 font-mono text-sm font-black text-[#302A24]">
+                  {selectedTable.token}
                 </p>
+
               </div>
 
               <div className="text-right">
 
-                <p className="text-xs uppercase text-[#8A8074]">
-                  Payment Status
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#95897B]">
+                  Session
                 </p>
 
-                <StatusBadge status={selectedTable.status} />
+                <p className="mt-1 text-[11px] font-bold text-[#51483B]">
+                  {selectedTable.duration}
+                </p>
 
               </div>
 
             </div>
 
-          </div>
+            <div className="mt-4 overflow-hidden rounded-xl border border-[#E1D6C8] bg-white">
 
-          <h3 className="mt-5 text-sm font-bold uppercase text-[#5F554B]">
-            Active Orders at {selectedTable.name}
-          </h3>
+              <div className="border-b border-[#E9E0D6] bg-[#FAF7F2] px-3 py-2">
 
-          <div className="mt-3 rounded-xl border border-[#E5D8C8] p-4">
-
-            <div className="flex items-start justify-between">
-
-              <div>
-
-                <p className="font-mono font-bold text-[#2B241E]">
-                  Token {selectedTable.token}
-                </p>
-
-                <p className="mt-2 text-sm text-[#766A5D]">
-                  {selectedTable.items
-                    .map(
-                      (item) =>
-                        `${item.name} ×${item.quantity}`
-                    )
-                    .join(", ")}
-                </p>
-
-                <p className="mt-3 font-bold text-[#2B241E]">
-                  ₹{selectedTable.bill}
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8E8173]">
+                  Current order
                 </p>
 
               </div>
 
+              <div>
+
+                {selectedTable.items?.map(
+                  (item, index) => (
+
+                    <div
+                      key={`${item.name}-${index}`}
+                      className="flex items-center justify-between border-b border-[#EEE6DC] px-3 py-2.5 last:border-0"
+                    >
+
+                      <span className="text-[10px] font-bold text-[#40382F]">
+                        {item.name}
+                      </span>
+
+                      <span className="font-mono text-[10px] font-bold text-[#9A8D7E]">
+                        ×{item.quantity}
+                      </span>
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+            </div>
+
+            <div className="mt-4 flex gap-2">
+
               <button
                 type="button"
-                className="flex items-center gap-1 text-sm font-semibold text-[#C87810]"
+                onClick={() =>
+                  openModal(
+                    "qr",
+                    selectedTable
+                  )
+                }
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#DED3C5] bg-white py-3 text-[10px] font-bold text-[#5C5248] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
               >
-                <Receipt size={14} />
-                Receipt
+                <QrCode size={13} />
+                Table QR
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  closeAndVacate(
+                    selectedTable
+                  )
+                }
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#282521] py-3 text-[10px] font-black text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25"
+              >
+                <Check size={13} />
+                Close Session
               </button>
 
             </div>
 
-          </div>
+          </Modal>
 
-          <div className="mt-5 flex gap-3">
+        )}
 
-            <button
-              type="button"
-              onClick={() => openModal("qr", selectedTable)}
-              className="flex-1 rounded-xl border border-[#E5D8C8] bg-white px-4 py-3 font-semibold text-[#332D27]"
-            >
-              📱 View Table QR
-            </button>
+      {/* =====================================================
+          EDIT MODAL
+      ===================================================== */}
 
-            <button
-              type="button"
-              onClick={closeAndVacate}
-              className="flex-1 rounded-xl bg-[#292621] px-4 py-3 font-semibold text-white"
-            >
-              ✓ Close & Vacate Session
-            </button>
+      {modal === "edit" &&
+        selectedTable && (
 
-          </div>
+          <EditTableModal
+            table={selectedTable}
+            onClose={closeModal}
+            onSave={(updatedTable) => {
 
-        </Modal>
-      )}
+              setTables((current) =>
+                current.map(
+                  (table) =>
+                    table.id ===
+                    selectedTable.id
+                      ? {
+                          ...table,
+                          ...updatedTable,
+                        }
+                      : table
+                )
+              );
 
-      {/* EDIT MODAL */}
-      {modal === "edit" && selectedTable && (
-        <EditTableModal
-          table={selectedTable}
-          onClose={closeModal}
-          onSave={(updatedTable) => {
-            setTables((current) =>
-              current.map((table) =>
-                table.id === selectedTable.id
-                  ? {
-                      ...table,
-                      ...updatedTable,
-                    }
-                  : table
-              )
-            );
+              closeModal();
 
-            closeModal();
-          }}
-        />
-      )}
+            }}
+          />
+
+        )}
 
     </section>
   );
 }
 
-/* -------------------------------------------------- */
-/* TABLE CARD */
-/* -------------------------------------------------- */
+/* ============================================================
+   FLOOR TABLE
+============================================================ */
 
-function TableCard({
+function FloorTable({
   table,
   onQr,
   onEdit,
@@ -752,125 +1164,200 @@ function TableCard({
   onDetails,
   onClose,
 }) {
-  const occupied = table.status !== "Available";
+  const occupied =
+    table.status !== "Available";
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${
+      className={`group relative min-h-[190px] overflow-hidden rounded-[15px] border transition-all duration-200 ${
         occupied
-          ? "border-t-4 border-t-[#D88620]"
-          : "border-[#E5D8C8]"
+          ? "border-[#D9C6AA] bg-[#FFFDF8] shadow-[0_8px_22px_rgba(48,37,23,0.09)] hover:-translate-y-0.5 hover:shadow-[0_12px_27px_rgba(48,37,23,0.13)]"
+          : "border-[#DCD2C5] bg-[#FDFBF7] shadow-[0_3px_9px_rgba(45,35,20,0.035)] hover:-translate-y-0.5 hover:border-[#D2B58C] hover:shadow-[0_9px_20px_rgba(45,35,20,0.08)]"
       }`}
     >
 
-      <div className="p-5">
+      <div
+        className={`absolute left-0 right-0 top-0 h-[3px] ${
+          occupied
+            ? "bg-[#E0A13A]"
+            : "bg-[#D8D0C4]"
+        }`}
+      />
+
+      <div className="p-3">
 
         <div className="flex items-start justify-between">
 
-          <div>
+          <div className="flex items-center gap-2">
 
-            <h2 className="text-lg font-bold text-[#2B241E]">
-              {table.name}
-            </h2>
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                occupied
+                  ? "bg-[#FFF0D2] text-[#C8790F]"
+                  : "bg-[#EEE9E0] text-[#817568]"
+              }`}
+            >
+              <Armchair size={15} />
+            </div>
 
-            <p className="mt-1 text-xs text-[#766A5D]">
-              {table.seats} Seats · {table.section}
-            </p>
+            <div>
+
+              <p className="text-[11px] font-black text-[#302A24]">
+                {table.name}
+              </p>
+
+              <p className="text-[10px] text-[#9A8D7F]">
+                {table.seats} seats
+              </p>
+
+            </div>
 
           </div>
 
-          <StatusBadge status={table.status} />
+          <StatusDot occupied={occupied} />
 
         </div>
 
-        <div className="mt-2 flex items-center justify-end gap-3 text-xs">
+        {!occupied && (
 
-          <button
-            type="button"
-            onClick={onEdit}
-            className="flex items-center gap-1 text-[#665D53] hover:text-[#C87810]"
-          >
-            <Pencil size={12} />
-            Edit
-          </button>
+          <div className="mt-5">
 
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex items-center gap-1 text-[#C86A5D]"
-          >
-            <Trash2 size={12} />
-            Delete
-          </button>
+            <div className="flex items-center gap-1.5">
 
-        </div>
+              <span className="h-1.5 w-1.5 rounded-full bg-[#BDB5A9]" />
 
-        {occupied ? (
-          <>
-            <p className="mt-3 text-xs text-[#766A5D]">
-              Tokens: {table.token}
-            </p>
-
-            <div className="mt-3 flex items-center justify-between rounded-lg bg-[#EEE9DE] p-3">
-
-              <div>
-                <p className="text-[11px] uppercase text-[#8A8074]">
-                  Accumulated Bill
-                </p>
-
-                <p className="font-semibold text-[#C87810]">
-                  ₹{table.bill}
-                </p>
-              </div>
-
-              <div className="text-right">
-                <p className="text-[11px] text-[#8A8074]">
-                  Session
-                </p>
-
-                <p className="font-semibold text-[#332D27]">
-                  {table.duration}
-                </p>
-              </div>
+              <span className="text-[10px] font-bold text-[#82776B]">
+                Ready for guests
+              </span>
 
             </div>
 
-            <div className="mt-3 flex gap-2">
-
-              <button
-                type="button"
-                onClick={onDetails}
-                className="flex-1 rounded-lg bg-[#292621] px-3 py-2 text-xs font-bold text-white"
-              >
-                Session Details
-              </button>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-lg border border-[#E5D8C8] px-3 py-2 text-xs font-semibold text-[#332D27]"
-              >
-                Close
-              </button>
-
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="mt-4 text-sm text-[#766A5D]">
-              Table clear & ready for next guests.
+            <p className="mt-1 text-[10px] text-[#AAA095]">
+              {table.section}
             </p>
 
             <button
               type="button"
               onClick={onQr}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-[#E5D8C8] px-3 py-2.5 text-sm font-semibold text-[#332D27] hover:bg-[#FFF8EE]"
+              className="mt-4 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#DDD2C3] bg-white text-[10px] font-bold text-[#665C51] transition hover:border-[#D8A35C] hover:bg-[#FFF7E9] hover:text-[#B76D0A] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
             >
-              <QrCode size={14} />
-              View Table QR
+              <QrCode size={12} />
+              View table QR
             </button>
-          </>
+
+          </div>
+
         )}
+
+        {occupied && (
+
+          <div className="mt-3">
+
+            <div className="flex items-end justify-between">
+
+              <div>
+
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#9A8D7F]">
+                  Active token
+                </p>
+
+                <p className="mt-0.5 font-mono text-[15px] font-black text-[#2C2721]">
+                  {table.token}
+                </p>
+
+              </div>
+
+              <div className="text-right">
+
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#9A8D7F]">
+                  Bill
+                </p>
+
+                <p className="mt-0.5 text-[15px] font-black text-[#C0710A]">
+                  ₹{table.bill}
+                </p>
+
+              </div>
+
+            </div>
+
+            <div className="relative mt-2.5 rounded-lg border border-[#E6DCCE] bg-[#FAF6EF] px-2.5 py-2">
+
+              <div className="flex items-center gap-1.5">
+
+                <Receipt
+                  size={11}
+                  className="text-[#A28F7A]"
+                />
+
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#95897B]">
+                  Order
+                </span>
+
+                <span className="ml-auto text-[10px] font-bold text-[#95897B]">
+                  {table.duration}
+                </span>
+
+              </div>
+
+              <p className="mt-1.5 truncate text-[10px] font-semibold text-[#554B41]">
+                {table.items
+                  ?.map(
+                    (item) =>
+                      `${item.name} ×${item.quantity}`
+                  )
+                  .join(" · ")}
+              </p>
+
+            </div>
+
+            <div className="mt-2 flex gap-1.5">
+
+              <button
+                type="button"
+                onClick={onDetails}
+                className="flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-[#282521] text-[10px] font-black text-white transition hover:bg-[#1D1B18] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25"
+              >
+                Open session
+                <ArrowUpRight size={11} />
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#DDD2C4] bg-white text-[#6C6257] transition hover:border-[#CDBDA8] hover:bg-[#F8F1E6] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
+                title="Close session"
+              >
+                <Check size={13} />
+              </button>
+
+            </div>
+
+          </div>
+
+        )}
+
+        <div className="mt-2 flex items-center justify-end gap-0.5 opacity-0 transition group-hover:opacity-100">
+
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-[#9B8E80] hover:bg-[#F1EBE2] hover:text-[#B96D0B] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
+            title="Edit table"
+          >
+            <Pencil size={11} />
+          </button>
+
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-[#B19F8D] hover:bg-[#FFF0ED] hover:text-[#A74C40] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
+            title="Delete table"
+          >
+            <Trash2 size={11} />
+          </button>
+
+        </div>
 
       </div>
 
@@ -878,37 +1365,141 @@ function TableCard({
   );
 }
 
-/* -------------------------------------------------- */
-/* STATUS */
-/* -------------------------------------------------- */
+/* ============================================================
+   MINI STAT
+============================================================ */
+
+function MiniStat({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  positive,
+  warning,
+}) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-[#DED3C5] bg-[#FFFDF9] px-3 py-2.5 shadow-[0_2px_8px_rgba(40,30,20,0.035)]">
+
+      <div
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+          warning
+            ? "bg-[#FFF0D2] text-[#C8790F]"
+            : positive
+            ? "bg-[#E8F4EE] text-[#218069]"
+            : "bg-[#F0EBE3] text-[#796D60]"
+        }`}
+      >
+        <Icon size={14} />
+      </div>
+
+      <div className="min-w-0">
+
+        <p className="text-[10px] font-black uppercase tracking-[0.11em] text-[#9A8D7F]">
+          {label}
+        </p>
+
+        <div className="flex items-baseline gap-1.5">
+
+          <p className="text-[16px] font-black tracking-[-0.02em] text-[#2C2721]">
+            {value}
+          </p>
+
+          <span className="truncate text-[10px] text-[#9D9183]">
+            {detail}
+          </span>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+/* ============================================================
+   STATUS DOT
+============================================================ */
+
+function StatusDot({ occupied }) {
+  return (
+    <span
+      className={`flex h-5 w-5 items-center justify-center rounded-full ${
+        occupied
+          ? "bg-[#FFF0D2]"
+          : "bg-[#EEEAE2]"
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          occupied
+            ? "bg-[#E0A03A]"
+            : "bg-[#AAA195]"
+        }`}
+      />
+    </span>
+  );
+}
+
+/* ============================================================
+   STATUS BADGE
+============================================================ */
 
 function StatusBadge({ status }) {
-  const occupied = status !== "Available";
+  const occupied =
+    status !== "Available";
 
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-bold ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black ${
         occupied
-          ? "bg-[#FFF0C9] text-[#C87810]"
-          : "bg-[#EEEAE0] text-[#665D53]"
+          ? "bg-[#FFF0D2] text-[#BC700B]"
+          : "bg-[#EEEAE2] text-[#74695E]"
       }`}
     >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          occupied
+            ? "bg-[#D9962D]"
+            : "bg-[#AAA195]"
+        }`}
+      />
+
       {status}
     </span>
   );
 }
 
-/* -------------------------------------------------- */
-/* MODAL */
-/* -------------------------------------------------- */
+/* ============================================================
+   LEGEND
+============================================================ */
 
-function Modal({ children, wide = false }) {
+function Legend({ dot, label }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+    <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#918477]">
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${dot}`}
+      />
+      {label}
+    </span>
+  );
+}
+
+/* ============================================================
+   MODAL
+============================================================ */
+
+function Modal({
+  children,
+  wide = false,
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#211D18]/55 p-4 backdrop-blur-[2px]">
 
       <div
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl ${
-          wide ? "max-w-[600px]" : "max-w-[470px]"
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-[18px] border border-[#DED3C5] bg-[#FFFDF9] p-5 shadow-[0_25px_70px_rgba(30,24,17,0.24)] ${
+          wide
+            ? "max-w-[580px]"
+            : "max-w-[440px]"
         }`}
       >
         {children}
@@ -918,31 +1509,52 @@ function Modal({ children, wide = false }) {
   );
 }
 
-function ModalHeader({ title, onClose }) {
+function ModalHeader({
+  title,
+  subtitle,
+  onClose,
+}) {
   return (
-    <div className="mb-2 flex items-center justify-between">
+    <div className="flex items-start justify-between gap-4">
 
-      <h2 className="text-xl font-bold text-[#2B241E]">
-        {title}
-      </h2>
+      <div>
+
+        <h2 className="text-[17px] font-black tracking-[-0.02em] text-[#29241F]">
+          {title}
+        </h2>
+
+        {subtitle && (
+          <p className="mt-0.5 text-[10px] text-[#978B7D]">
+            {subtitle}
+          </p>
+        )}
+
+      </div>
 
       <button
         type="button"
         onClick={onClose}
-        className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5D8C8] text-[#4F463D] hover:bg-[#F7F3ED]"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#DED3C5] text-[#73685C] transition hover:bg-[#F3ECE3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
       >
-        <X size={18} />
+        <X size={15} />
       </button>
 
     </div>
   );
 }
 
-function FormField({ label, children }) {
+/* ============================================================
+   FORM
+============================================================ */
+
+function FormField({
+  label,
+  children,
+}) {
   return (
     <label className="block">
 
-      <span className="mb-2 block text-sm font-semibold text-[#5F554B]">
+      <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.11em] text-[#75695C]">
         {label}
       </span>
 
@@ -952,84 +1564,142 @@ function FormField({ label, children }) {
   );
 }
 
-/* -------------------------------------------------- */
-/* EDIT MODAL */
-/* -------------------------------------------------- */
+function ModalActions({
+  onCancel,
+  primary,
+  onPrimary,
+}) {
+  return (
+    <div className="mt-6 flex gap-2">
 
-function EditTableModal({ table, onClose, onSave }) {
-  const [name, setName] = useState(table.name);
-  const [seats, setSeats] = useState(String(table.seats));
-  const [section, setSection] = useState(table.section);
+      <button
+        type="button"
+        onClick={onCancel}
+        className="flex-1 rounded-xl border border-[#DED3C5] bg-white py-2.5 text-[10px] font-bold text-[#574D43] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        onClick={onPrimary}
+        className="flex-1 rounded-xl bg-[#282521] py-2.5 text-[10px] font-black text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25"
+      >
+        {primary}
+      </button>
+
+    </div>
+  );
+}
+
+/* ============================================================
+   EDIT MODAL
+============================================================ */
+
+function EditTableModal({
+  table,
+  onClose,
+  onSave,
+}) {
+  const [name, setName] =
+    useState(table.name);
+
+  const [seats, setSeats] =
+    useState(String(table.seats));
+
+  const [section, setSection] =
+    useState(table.section);
 
   return (
     <Modal onClose={onClose}>
 
       <ModalHeader
         title={`Edit ${table.name}`}
+        subtitle="Update the floor position details."
         onClose={onClose}
       />
 
-      <div className="mt-5 space-y-5">
+      <div className="mt-5 space-y-4">
 
-        <FormField label="Table Name / Number">
+        <FormField label="Table name">
+
           <input
             value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="input-style"
+            onChange={(event) =>
+              setName(
+                event.target.value
+              )
+            }
+            className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
           />
+
         </FormField>
 
-        <FormField label="Seating Capacity">
+        <FormField label="Capacity">
+
           <select
             value={seats}
-            onChange={(event) => setSeats(event.target.value)}
-            className="input-style"
+            onChange={(event) =>
+              setSeats(
+                event.target.value
+              )
+            }
+            className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
           >
-            <option value="2">2 Seats</option>
-            <option value="4">4 Seats (Standard)</option>
-            <option value="6">6 Seats</option>
-            <option value="8">8 Seats</option>
+            <option value="2">
+              2 seats
+            </option>
+
+            <option value="4">
+              4 seats
+            </option>
+
+            <option value="6">
+              6 seats
+            </option>
+
+            <option value="8">
+              8 seats
+            </option>
           </select>
+
         </FormField>
 
-        <FormField label="Restaurant Section">
+        <FormField label="Section">
+
           <select
             value={section}
-            onChange={(event) => setSection(event.target.value)}
-            className="input-style"
+            onChange={(event) =>
+              setSection(
+                event.target.value
+              )
+            }
+            className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
           >
-            <option>Indoor Main</option>
-            <option>Outdoor Terrace</option>
+            <option>
+              Indoor Main
+            </option>
+
+            <option>
+              Outdoor Terrace
+            </option>
           </select>
+
         </FormField>
 
       </div>
 
-      <div className="mt-7 flex gap-3">
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-1 rounded-xl border border-[#E5D8C8] px-4 py-3 font-semibold text-[#332D27]"
-        >
-          Cancel
-        </button>
-
-        <button
-          type="button"
-          onClick={() =>
-            onSave({
-              name,
-              seats: Number(seats),
-              section,
-            })
-          }
-          className="flex-1 rounded-xl bg-[#292621] px-4 py-3 font-semibold text-white"
-        >
-          Save Changes
-        </button>
-
-      </div>
+      <ModalActions
+        onCancel={onClose}
+        primary="Save Changes"
+        onPrimary={() =>
+          onSave({
+            name,
+            seats: Number(seats),
+            section,
+          })
+        }
+      />
 
     </Modal>
   );

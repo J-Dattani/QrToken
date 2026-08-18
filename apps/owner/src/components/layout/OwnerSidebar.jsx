@@ -1,265 +1,671 @@
 import {
-  ShoppingBag,
-  ChefHat,
-  ClipboardList,
-  Utensils,
-  TicketPercent,
-  BarChart3,
-  Settings,
-  LogOut,
-  Clock3,
-  Wallet,
-  RotateCcw,
-} from "lucide-react";
+  Avatar,
+  Box,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Typography,
+} from "@mui/material";
+
+import {
+  ShoppingBagRounded,
+  RestaurantRounded,
+  AssignmentRounded,
+  TableRestaurantRounded,
+  AccountBalanceWalletRounded,
+  FactCheckRounded,
+  ReplayRounded,
+  LocalOfferRounded,
+  BarChartRounded,
+  SettingsRounded,
+  LogoutRounded,
+  FiberManualRecordRounded,
+} from "@mui/icons-material";
 
 import { NavLink } from "react-router-dom";
 
 const navigation = [
   {
-    section: "TODAY",
+    section: "OPERATIONS",
     items: [
       {
         label: "Live Orders",
-        icon: ShoppingBag,
+        icon: ShoppingBagRounded,
         path: "/owner/orders",
         badge: "Live",
       },
       {
         label: "Kitchen Queue",
-        icon: ChefHat,
+        icon: RestaurantRounded,
         path: "/owner/kitchen",
       },
       {
         label: "Manual Entry",
-        icon: ClipboardList,
+        icon: AssignmentRounded,
         path: "/owner/manual",
       },
       {
         label: "Table Sessions",
-        icon: Utensils,
+        icon: TableRestaurantRounded,
         path: "/owner/tables",
       },
     ],
   },
 
   {
-    section: "MONEY",
+    section: "FINANCE",
     items: [
       {
         label: "Cash Management",
-        icon: Wallet,
+        icon: AccountBalanceWalletRounded,
         path: "/owner/cash",
       },
       {
         label: "Cash Reconciliation",
-        icon: Clock3,
+        icon: FactCheckRounded,
         path: "/owner/reconciliation",
       },
       {
         label: "Refunds",
-        icon: RotateCcw,
+        icon: ReplayRounded,
         path: "/owner/refunds",
       },
     ],
   },
 
   {
-    section: "SHOP",
+    section: "CATALOG",
     items: [
       {
         label: "Menu Manager",
-        icon: Utensils,
+        icon: RestaurantRounded,
         path: "/owner/menu",
       },
       {
         label: "Coupons",
-        icon: TicketPercent,
+        icon: LocalOfferRounded,
         path: "/owner/coupons",
       },
       {
         label: "Analytics",
-        icon: BarChart3,
+        icon: BarChartRounded,
         path: "/owner/analytics",
-      },
-      {
-        label: "Settings",
-        icon: Settings,
-        path: "/owner/settings",
       },
     ],
   },
 ];
 
 function OwnerSidebar() {
-
   return (
-    <aside className="hidden h-screen w-[238px] shrink-0 overflow-hidden bg-[#1D1B18] text-white lg:flex">
+    <Box
+      component="aside"
+      sx={{
+        width: 224,
+        height: "100vh",
+        flexShrink: 0,
+        display: { xs: "none", lg: "flex" },
+        flexDirection: "column",
 
-      {/* EVERYTHING INSIDE THIS SCROLLS */}
-      <div className="sidebar-scroll h-full w-full overflow-y-auto">
+        background:
+          "linear-gradient(180deg, #201E1A 0%, #181714 100%)",
 
-        {/* Brand */}
-        <div className="px-4 pt-5">
+        color: "#fff",
 
-          <div className="flex items-center gap-3 border-b border-white/10 pb-5">
+        borderRight: "1px solid rgba(255,255,255,0.055)",
+      }}
+    >
+      {/* =====================================================
+          INDEPENDENT SIDEBAR SCROLL
+          ===================================================== */}
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E6A23C] text-xl font-bold text-[#211B14]">
-              Q
-            </div>
+      <Box
+        sx={{
+          height: "100%",
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
 
-            <div>
-              <h1 className="text-sm font-bold">
-                QRToken.in
-              </h1>
+          "&::-webkit-scrollbar": {
+            width: 4,
+          },
 
-              <p className="text-[10px] uppercase tracking-wider text-gray-400">
-                Owner Dashboard
-              </p>
-            </div>
+          "&::-webkit-scrollbar-track": {
+            background: "transparent",
+          },
 
-          </div>
+          "&::-webkit-scrollbar-thumb": {
+            background: "rgba(255,255,255,0.12)",
+            borderRadius: 20,
+          },
 
-        </div>
+          scrollbarWidth: "thin",
+          scrollbarColor:
+            "rgba(255,255,255,0.12) transparent",
+        }}
+      >
+        {/* =====================================================
+            BRAND
+            ===================================================== */}
 
-        {/* Navigation */}
-        <nav className="mt-5 px-4">
+        <Box
+          sx={{
+            px: 1.75,
+            pt: 1.75,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.15,
+              px: 0.5,
+              pb: 1.6,
+            }}
+          >
+            {/* Brand mark */}
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: "10px",
 
-          {navigation.map((group) => (
+                display: "grid",
+                placeItems: "center",
 
-            <div
-              key={group.section}
-              className="mb-6"
+                background:
+                  "linear-gradient(145deg, #F0B04D, #D88D22)",
+
+                color: "#211A11",
+
+                fontSize: 16,
+                fontWeight: 900,
+
+                boxShadow:
+                  "0 5px 18px rgba(230,162,60,0.16)",
+              }}
             >
+              Q
+            </Box>
 
-              <p className="mb-2 px-2 text-[10px] font-medium tracking-widest text-gray-500">
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontSize: 13.5,
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.1,
+                }}
+              >
+                QRToken
+                <Box
+                  component="span"
+                  sx={{
+                    color: "#E6A23C",
+                  }}
+                >
+                  .in
+                </Box>
+              </Typography>
+
+              <Typography
+                sx={{
+                  mt: 0.35,
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: "0.105em",
+                  textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.36)",
+                }}
+              >
+                Merchant Console
+              </Typography>
+            </Box>
+          </Box>
+
+          <Divider
+            sx={{
+              borderColor: "rgba(255,255,255,0.07)",
+            }}
+          />
+        </Box>
+
+        {/* =====================================================
+            NAVIGATION
+            ===================================================== */}
+
+        <Box
+          component="nav"
+          sx={{
+            px: 1.1,
+            py: 1.5,
+          }}
+        >
+          {navigation.map((group, groupIndex) => (
+            <Box
+              key={group.section}
+              sx={{
+                mb:
+                  groupIndex === navigation.length - 1
+                    ? 0
+                    : 1.8,
+              }}
+            >
+              {/* Section title */}
+              <Typography
+                sx={{
+                  px: 1.15,
+                  mb: 0.65,
+
+                  fontSize: 9,
+                  fontWeight: 750,
+                  letterSpacing: "0.16em",
+
+                  color:
+                    "rgba(255,255,255,0.28)",
+                }}
+              >
                 {group.section}
-              </p>
+              </Typography>
 
-              <div className="space-y-1">
-
+              <List disablePadding>
                 {group.items.map((item) => {
-
                   const Icon = item.icon;
 
                   return (
                     <NavLink
                       key={item.label}
                       to={item.path}
-                      className={({ isActive }) =>
-                        `
-                        group
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        rounded-xl
-                        px-3
-                        py-2.5
-                        text-left
-                        text-sm
-                        transition
-                        ${
-                          isActive
-                            ? "bg-[#3A3733] text-white"
-                            : "text-gray-300 hover:bg-white/10 hover:text-white"
-                        }
-                        `
-                      }
+                      style={{
+                        textDecoration: "none",
+                        color: "inherit",
+                        display: "block",
+                      }}
                     >
+                      {({ isActive }) => (
+                        <ListItemButton
+                          disableRipple
+                          selected={isActive}
+                          sx={{
+                            position: "relative",
 
-                      <Icon
-                        size={17}
-                        strokeWidth={1.8}
-                        className="shrink-0"
-                      />
+                            minHeight: 38,
 
-                      <span className="flex-1">
-                        {item.label}
-                      </span>
+                            px: 1.15,
+                            py: 0.45,
+                            mb: 0.3,
 
-                      {item.badge && (
-                        <span className="rounded-full bg-[#E6A23C] px-2 py-0.5 text-[10px] font-bold text-[#241B10]">
-                          {item.badge}
-                        </span>
+                            borderRadius: "8px",
+
+                            color: isActive
+                              ? "#F7F5F0"
+                              : "rgba(255,255,255,0.58)",
+
+                            backgroundColor:
+                              isActive
+                                ? "rgba(230,162,60,0.105)"
+                                : "transparent",
+
+                            transition:
+                              "all 140ms ease",
+
+                            "&:hover": {
+                              backgroundColor:
+                                isActive
+                                  ? "rgba(230,162,60,0.13)"
+                                  : "rgba(255,255,255,0.045)",
+
+                              color: "#fff",
+                            },
+
+                            "&.Mui-selected": {
+                              backgroundColor:
+                                "rgba(230,162,60,0.105)",
+                            },
+
+                            "&.Mui-selected:hover": {
+                              backgroundColor:
+                                "rgba(230,162,60,0.14)",
+                            },
+
+                            // active indicator
+                            "&::before": {
+                              content: '""',
+
+                              position: "absolute",
+                              left: 0,
+                              top: 8,
+                              bottom: 8,
+
+                              width: isActive ? 2 : 0,
+
+                              backgroundColor:
+                                "#E6A23C",
+
+                              borderRadius:
+                                "0 3px 3px 0",
+
+                              transition:
+                                "width 140ms ease",
+                            },
+                          }}
+                        >
+                          <ListItemIcon
+                            sx={{
+                              minWidth: 31,
+
+                              color: isActive
+                                ? "#E6A23C"
+                                : "rgba(255,255,255,0.42)",
+
+                              transition:
+                                "color 140ms ease",
+                            }}
+                          >
+                            <Icon
+                              sx={{
+                                fontSize: 18,
+                              }}
+                            />
+                          </ListItemIcon>
+
+                          <ListItemText
+                            primary={item.label}
+                            sx={{
+                              my: 0,
+                            }}
+                            primaryTypographyProps={{
+                              fontSize: 11.8,
+                              fontWeight: isActive
+                                ? 650
+                                : 500,
+                              letterSpacing:
+                                "-0.005em",
+                              noWrap: true,
+                            }}
+                          />
+
+                          {item.badge && (
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.35,
+
+                                px: 0.7,
+                                py: 0.25,
+
+                                borderRadius: "5px",
+
+                                backgroundColor:
+                                  "rgba(230,162,60,0.14)",
+
+                                border:
+                                  "1px solid rgba(230,162,60,0.18)",
+                              }}
+                            >
+                              <FiberManualRecordRounded
+                                sx={{
+                                  fontSize: 6,
+                                  color: "#E6A23C",
+                                }}
+                              />
+
+                              <Typography
+                                sx={{
+                                  fontSize: 9,
+                                  fontWeight: 750,
+                                  color: "#E6A23C",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                LIVE
+                              </Typography>
+                            </Box>
+                          )}
+                        </ListItemButton>
                       )}
-
                     </NavLink>
                   );
-
                 })}
-
-              </div>
-
-            </div>
-
+              </List>
+            </Box>
           ))}
 
-        </nav>
+          {/* =================================================
+              SETTINGS — separated from catalog
+              ================================================= */}
 
-        {/* Merchant */}
-        <div className="px-4">
+          <Divider
+            sx={{
+              my: 1.25,
+              mx: 0.75,
+              borderColor:
+                "rgba(255,255,255,0.065)",
+            }}
+          />
 
-          <div className="border-t border-white/10 pt-4">
+          <NavLink
+            to="/owner/settings"
+            style={{
+              textDecoration: "none",
+              color: "inherit",
+              display: "block",
+            }}
+          >
+            {({ isActive }) => (
+              <ListItemButton
+                disableRipple
+                selected={isActive}
+                sx={{
+                  minHeight: 38,
 
-            <div className="flex items-center gap-3">
+                  px: 1.15,
+                  py: 0.45,
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E6A23C] text-xs font-bold text-[#241B10]">
-                SK
-              </div>
+                  borderRadius: "8px",
 
-              <div className="min-w-0">
+                  color: isActive
+                    ? "#fff"
+                    : "rgba(255,255,255,0.55)",
 
-                <p className="truncate text-xs font-semibold text-white">
-                  Shree Krishna Tea Stall
-                </p>
+                  backgroundColor: isActive
+                    ? "rgba(230,162,60,0.105)"
+                    : "transparent",
 
-                <p className="text-[10px] text-gray-500">
-                  Rajkot, Gujarat · starter plan
-                </p>
+                  "&:hover": {
+                    backgroundColor:
+                      "rgba(255,255,255,0.045)",
+                    color: "#fff",
+                  },
 
-              </div>
+                  "&.Mui-selected": {
+                    backgroundColor:
+                      "rgba(230,162,60,0.105)",
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 31,
+                    color: isActive
+                      ? "#E6A23C"
+                      : "rgba(255,255,255,0.42)",
+                  }}
+                >
+                  <SettingsRounded
+                    sx={{ fontSize: 18 }}
+                  />
+                </ListItemIcon>
 
-            </div>
+                <ListItemText
+                  primary="Settings"
+                  sx={{ my: 0 }}
+                  primaryTypographyProps={{
+                    fontSize: 11.8,
+                    fontWeight: isActive
+                      ? 650
+                      : 500,
+                  }}
+                />
+              </ListItemButton>
+            )}
+          </NavLink>
+        </Box>
 
-          </div>
+        {/* =====================================================
+            FLEX SPACE
+            ===================================================== */}
 
-        </div>
+        <Box sx={{ minHeight: 20 }} />
 
-        {/* Logout */}
-        <button
-          type="button"
-          onClick={() => {
-            // Logout logic later
+        {/* =====================================================
+            MERCHANT CARD
+            ===================================================== */}
+
+        <Box
+          sx={{
+            mx: 1.1,
+            mb: 0.8,
+            p: 1.15,
+
+            borderRadius: "11px",
+
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025))",
+
+            border:
+              "1px solid rgba(255,255,255,0.065)",
           }}
-          className="
-            mx-4
-            mb-5
-            mt-4
-            flex
-            items-center
-            gap-3
-            rounded-xl
-            px-2
-            py-2
-            text-sm
-            text-gray-400
-            transition
-            hover:bg-white/10
-            hover:text-white
-          "
         >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Box sx={{ position: "relative" }}>
+              <Avatar
+                sx={{
+                  width: 32,
+                  height: 32,
 
-          <LogOut size={17} />
+                  bgcolor: "#E6A23C",
+                  color: "#241B10",
 
-          <span>
-            Logout
-          </span>
+                  fontSize: 10,
+                  fontWeight: 850,
+                }}
+              >
+                SK
+              </Avatar>
 
-        </button>
+              {/* Online dot */}
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: -1,
+                  bottom: -1,
 
-      </div>
+                  width: 9,
+                  height: 9,
 
-    </aside>
+                  borderRadius: "50%",
+
+                  backgroundColor: "#46B980",
+
+                  border:
+                    "2px solid #201E1A",
+                }}
+              />
+            </Box>
+
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                noWrap
+                sx={{
+                  fontSize: 10.8,
+                  fontWeight: 650,
+                  color: "#F4F2ED",
+                  lineHeight: 1.25,
+                }}
+              >
+                Shree Krishna Tea Stall
+              </Typography>
+
+              <Typography
+                noWrap
+                sx={{
+                  mt: 0.25,
+                  fontSize: 9.5,
+                  color:
+                    "rgba(255,255,255,0.35)",
+                  lineHeight: 1.2,
+                }}
+              >
+                Rajkot, Gujarat · Starter
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* =====================================================
+            LOGOUT
+            ===================================================== */}
+
+        <Box
+          sx={{
+            px: 1.1,
+            pb: 1.5,
+          }}
+        >
+          <ListItemButton
+            disableRipple
+            onClick={() => {
+              // Logout logic later
+            }}
+            sx={{
+              minHeight: 37,
+
+              px: 1.15,
+
+              borderRadius: "8px",
+
+              color:
+                "rgba(255,255,255,0.38)",
+
+              "&:hover": {
+                backgroundColor:
+                  "rgba(255,255,255,0.045)",
+                color: "#E6A23C",
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 31,
+                color: "inherit",
+              }}
+            >
+              <LogoutRounded
+                sx={{ fontSize: 18 }}
+              />
+            </ListItemIcon>
+
+            <ListItemText
+              primary="Logout"
+              sx={{ my: 0 }}
+              primaryTypographyProps={{
+                fontSize: 11.8,
+                fontWeight: 500,
+              }}
+            />
+          </ListItemButton>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 
