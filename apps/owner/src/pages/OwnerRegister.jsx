@@ -367,7 +367,8 @@ function OwnerRegister() {
               <div className="flex items-center justify-between gap-4">
 
                 {/* Login */}
-
+                <span className="ml-1">
+                Already registered?
                 <button
                   type="button"
                   onClick={() => navigate("/")}
@@ -383,11 +384,10 @@ function OwnerRegister() {
                     hover:text-[#A66B17]
                   "
                 >
-                  Already registered?
-                  <span className="ml-1 text-[#A66B17]">
-                    Sign in
-                  </span>
+                Sign in
                 </button>
+                </span>
+               
 
 
                 {/* Create */}
