@@ -25,6 +25,7 @@ import {
 } from "@mui/icons-material";
 
 import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const navigation = [
   {
@@ -97,7 +98,9 @@ const navigation = [
   },
 ];
 
+
 function OwnerSidebar() {
+ const navigate = useNavigate(); 
   return (
     <Box
       component="aside"
@@ -625,7 +628,7 @@ function OwnerSidebar() {
             disableRipple
             onClick={() => {
               // Logout logic later
-            }}
+              navigate("/");}}
             sx={{
               minHeight: 37,
 

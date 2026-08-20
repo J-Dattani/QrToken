@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 
 import OwnerLayout from "../components/layout/OwnerLayout";
+
 import ManualEntryPage from "../pages/ManualEntryPage";
 import LiveOrdersPage from "../pages/LiveOrdersPage";
 import KitchenQueuePage from "../pages/KitchenQueuePage";
@@ -17,11 +18,34 @@ import CouponsPage from "../pages/CouponsPage";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import SettingsPage from "../pages/SettingsPage";
 
+import OwnerLogin from "../pages/OwnerLogin";
+import OwnerRegister from "../pages/OwnerRegister";
+
 function OwnerRoutes() {
   return (
     <Routes>
 
-      {/* OWNER PANEL */}
+      {/* =====================================================
+          AUTH
+          ===================================================== */}
+
+      {/* DEFAULT PAGE — LOGIN */}
+      <Route
+        path="/"
+        element={<OwnerLogin />}
+      />
+
+      {/* REGISTER */}
+      <Route
+        path="/register"
+        element={<OwnerRegister />}
+      />
+
+
+      {/* =====================================================
+          OWNER PANEL
+          ===================================================== */}
+
       <Route
         path="/owner"
         element={<OwnerLayout />}
@@ -45,47 +69,55 @@ function OwnerRoutes() {
           element={<KitchenQueuePage />}
         />
 
-        {/* Temporary routes - pages will be added one by one */}
+        {/* MANUAL ENTRY */}
         <Route
-  path="manual"
-  element={<ManualEntryPage />}
-/>
+          path="manual"
+          element={<ManualEntryPage />}
+        />
 
+        {/* TABLE SESSIONS */}
         <Route
           path="tables"
           element={<TableSessionsPage />}
         />
 
+        {/* CASH MANAGEMENT */}
         <Route
           path="cash"
           element={<CashManagementPage />}
         />
 
+        {/* CASH RECONCILIATION */}
         <Route
           path="reconciliation"
           element={<CashReconciliationPage />}
         />
 
+        {/* REFUNDS */}
         <Route
           path="refunds"
           element={<RefundsPage />}
         />
 
+        {/* MENU */}
         <Route
           path="menu"
-          element={<MenuManagerPage/>}
+          element={<MenuManagerPage />}
         />
 
+        {/* COUPONS */}
         <Route
           path="coupons"
           element={<CouponsPage />}
         />
 
+        {/* ANALYTICS */}
         <Route
           path="analytics"
-          element={<AnalyticsPage/>}
+          element={<AnalyticsPage />}
         />
 
+        {/* SETTINGS */}
         <Route
           path="settings"
           element={<SettingsPage />}
@@ -93,23 +125,31 @@ function OwnerRoutes() {
 
       </Route>
 
-      {/* OLD DASHBOARD URL → DEFAULT OWNER PAGE */}
+
+      {/* =====================================================
+          OLD /OWNER/DASHBOARD URL
+          ===================================================== */}
+
       <Route
         path="/owner/dashboard"
         element={
           <Navigate
-            to="/owner"
+            to="/owner/orders"
             replace
           />
         }
       />
 
-      {/* UNKNOWN URL */}
+
+      {/* =====================================================
+          UNKNOWN URL
+          ===================================================== */}
+
       <Route
         path="*"
         element={
           <Navigate
-            to="/owner"
+            to="/"
             replace
           />
         }
