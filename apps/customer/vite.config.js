@@ -7,14 +7,11 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-
     VitePWA({
       registerType: "autoUpdate",
-
       devOptions: {
         enabled: true,
       },
-
       manifest: {
         name: "QRToken",
         short_name: "QRToken",
@@ -24,7 +21,6 @@ export default defineConfig({
         display: "standalone",
         start_url: "/",
         scope: "/",
-
         icons: [
           {
             src: "/pwa-192x192.svg",
@@ -41,7 +37,12 @@ export default defineConfig({
     }),
   ],
   server: {
-    host: true,            // Exposes the server to the local network/tunnel
- allowedHosts: [".trycloudflare.com"] 
-  }
+    host: true,
+    // Fix: Ensures Vite lets Cloudflare's randomly generated URLs through
+    allowedHosts: [".trycloudflare.com"],
+    hmr: {
+      // Fix: Keeps your page from disconnecting or staying blank during hot-reloads
+      clientPort: 443,
+    },
+  },
 });

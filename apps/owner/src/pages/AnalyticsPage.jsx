@@ -935,7 +935,7 @@ function AnalyticsPage() {
             <tbody>
 
               {data.map(
-                (item, index) => {
+                (item) => {
 
                   const aov =
                     item.orders >

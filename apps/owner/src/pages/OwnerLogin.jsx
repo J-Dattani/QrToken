@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { loginOwner } from "../api/authApi";
+
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,11 +13,19 @@ import {
   Store,
   UtensilsCrossed,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+
+import {
+  Link,
+  useNavigate,
+} from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "../redux/slices/authSlice";
+
 
 function OwnerLogin() {
+  
   const navigate = useNavigate();
-
+  const dispatch = useDispatch();
   const [email, setEmail] = useState("");
   const [password, setPassword] =
     useState("");
@@ -32,7 +42,7 @@ function OwnerLogin() {
   const [error, setError] =
     useState("");
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     setError("");
@@ -46,12 +56,36 @@ function OwnerLogin() {
 
     setIsLoading(true);
 
-    // Temporary frontend login flow.
-    // Replace this with the real authentication request later.
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const result = await loginOwner(
+        email,
+        password
+      );
+
+      const { token, user } = result;
+
+      localStorage.setItem(
+        "ownerToken",
+        token
+      );
+
+      localStorage.setItem(
+        "ownerUser",
+        JSON.stringify(user)
+      );
+
+      dispatch(loginSuccess({ user, token }));
+
       navigate("/owner/orders");
-    }, 700);
+
+    } catch (error) {
+      setError(
+        error.message ||
+        "Unable to sign in. Please check your credentials."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const useDemoAccount = () => {
@@ -59,6 +93,7 @@ function OwnerLogin() {
     setPassword("demo1234");
     setError("");
   };
+
 
   return (
     <main className="min-h-screen bg-[#F7F3ED] text-[#29251F]">

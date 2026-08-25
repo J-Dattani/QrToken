@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Search,
   Volume2,
@@ -98,6 +99,9 @@ const INITIAL_ORDERS = [
 ];
 
 function LiveOrdersPage() {
+  const auth = useSelector((state) => state.auth);
+
+console.log("Redux Auth:", auth);
   const navigate = useNavigate();
 
   const [soundOn, setSoundOn] = useState(true);

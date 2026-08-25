@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import { Activity, Power } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { toggleMerchantStatus } from "../../redux/thunks/merchantThunks";
 
 function OwnerHeader({
   title = "Owner Dashboard",
   subtitle = "Manage your store operations",
-  storeOpen = true,
-  onToggleStore,
 }) {
+const dispatch = useDispatch();
+
+
+  const merchant = useSelector(
+  (state) => state.merchant.merchant
+);
+
+const isStoreOpen = merchant?.isOpen ?? false;
+
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
   useEffect(() => {
@@ -17,6 +26,7 @@ function OwnerHeader({
     return () => clearInterval(timer);
   }, []);
 
+  
   const formattedDate = new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata",
     weekday: "short",
@@ -38,10 +48,9 @@ function OwnerHeader({
       <div className="flex min-h-[52px] items-center justify-between gap-5">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <h1 className="truncate text-[18px] font-bold tracking-[-0.02em] text-[#241F1A] lg:text-[19px]">
-              Shree Krishna Tea Stall
-            </h1>
-
+          <h1 className="truncate text-[18px] font-bold tracking-[-0.02em] text-[#241F1A] lg:text-[19px]">
+          {merchant?.name}
+          </h1>
             <span className="hidden h-1 w-1 shrink-0 rounded-full bg-[#C8BDAF] sm:block" />
 
             <span className="hidden shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8A8074] sm:block">
@@ -80,38 +89,38 @@ function OwnerHeader({
 
           <button
             type="button"
-            onClick={onToggleStore}
+            onClick={() => dispatch(toggleMerchantStatus())}
             title={
-              storeOpen
+              isStoreOpen
                 ? "Pause store and stop accepting new orders"
                 : "Open store and start accepting new orders"
             }
             className={`group flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[11px] font-semibold transition-all duration-150 active:scale-[0.98] ${
-              storeOpen
+              isStoreOpen
                 ? "border-[#A8D9CC] bg-[#E8F5F1] text-[#087B66] hover:border-[#82C9B8] hover:bg-[#DFF1EC]"
                 : "border-[#E9B7B3] bg-[#FFF0EF] text-[#C23B35] hover:border-[#DFA09B] hover:bg-[#FFE8E6]"
             }`}
           >
             <span
               className={`h-2 w-2 shrink-0 rounded-full ${
-                storeOpen ? "bg-[#35A982]" : "bg-[#D94B45]"
+                isStoreOpen ? "bg-[#35A982]" : "bg-[#D94B45]"
               }`}
             />
 
             <span className="hidden sm:inline">
-              {storeOpen ? "Store Open" : "Store Closed"}
+              {isStoreOpen ? "Store Open" : "Store Closed"}
             </span>
 
             <span className="sm:hidden">
-              {storeOpen ? "Open" : "Closed"}
+              {isStoreOpen ? "Open" : "Closed"}
             </span>
 
             <span
               className={`hidden font-normal lg:inline ${
-                storeOpen ? "text-[#589A8B]" : "text-[#C87872]"
+                isStoreOpen ? "text-[#589A8B]" : "text-[#C87872]"
               }`}
             >
-              {storeOpen ? "(Pause)" : "(Open)"}
+              {isStoreOpen ? "(Pause)" : "(Open)"}
             </span>
 
             <Power

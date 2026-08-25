@@ -17,7 +17,7 @@ import MenuManagerPage from "../pages/MenuManagerPage";
 import CouponsPage from "../pages/CouponsPage";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import SettingsPage from "../pages/SettingsPage";
-
+import ApiTestPage from "../pages/ApiTestPage";
 import OwnerLogin from "../pages/OwnerLogin";
 import OwnerRegister from "../pages/OwnerRegister";
 
@@ -45,6 +45,10 @@ function OwnerRoutes() {
       {/* =====================================================
           OWNER PANEL
           ===================================================== */}
+<Route
+  path="/api-test"
+  element={<ApiTestPage />}
+/>
 
       <Route
         path="/owner"

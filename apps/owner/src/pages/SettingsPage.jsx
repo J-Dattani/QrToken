@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { QRCodeCanvas } from "qrcode.react";
+import { useDispatch, useSelector } from "react-redux";
+import { toggleMerchantStatus } from "../redux/thunks/merchantThunks";
 import {
   Settings2,
   QrCode,
@@ -21,10 +22,9 @@ import {
   AlertCircle,
   RotateCcw,
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 
 const DEFAULT_SETTINGS = {
-  storeOpen: true,
-
   outletName: "Shree Krishna Tea Stall",
   slug: "shree-krishna-tea-stall",
   plan: "STARTER PLAN",
@@ -87,6 +87,19 @@ const THEMES = {
 };
 
 function SettingsPage() {
+  const dispatch = useDispatch();
+
+  /*
+   * STORE STATUS NOW COMES FROM REDUX
+   * The Header and Settings page therefore use
+   * the exact same backend-driven state.
+   */
+  const merchant = useSelector(
+    (state) => state.merchant.merchant
+  );
+
+  const isStoreOpen = merchant?.isOpen ?? false;
+
   const [activeTab, setActiveTab] =
     useState("general");
 
@@ -161,6 +174,7 @@ function SettingsPage() {
     if (!confirmed) return;
 
     setSettings(DEFAULT_SETTINGS);
+
     localStorage.removeItem(
       "ownerStoreSettings"
     );
@@ -329,9 +343,7 @@ function SettingsPage() {
               {savedMessage && (
                 <div className="hidden items-center gap-1.5 rounded-lg border border-[#B9DED2] bg-[#EAF6F2] px-3 py-2 text-[9px] font-bold text-[#287965] sm:flex">
 
-                  <Check
-                    size={12}
-                  />
+                  <Check size={12} />
 
                   {savedMessage}
 
@@ -343,9 +355,7 @@ function SettingsPage() {
                 onClick={resetSettings}
                 className="flex h-9 items-center gap-1.5 rounded-lg border border-[#DCD1C6] bg-white px-3 text-[9px] font-bold text-[#6D645B] transition hover:bg-[#FFFDF9]"
               >
-                <RotateCcw
-                  size={12}
-                />
+                <RotateCcw size={12} />
 
                 <span className="hidden sm:inline">
                   Reset
@@ -357,9 +367,7 @@ function SettingsPage() {
                 onClick={saveSettings}
                 className="flex h-9 items-center gap-1.5 rounded-lg bg-[#292621] px-3.5 text-[9px] font-bold text-white shadow-sm transition hover:bg-[#1E1C19] hover:shadow-md"
               >
-                <Save
-                  size={12}
-                />
+                <Save size={12} />
 
                 Save changes
               </button>
@@ -375,13 +383,10 @@ function SettingsPage() {
 
             <ControllerTab
               active={
-                activeTab ===
-                "general"
+                activeTab === "general"
               }
               onClick={() =>
-                setActiveTab(
-                  "general"
-                )
+                setActiveTab("general")
               }
               icon={Settings2}
               title="Store controls"
@@ -390,8 +395,7 @@ function SettingsPage() {
 
             <ControllerTab
               active={
-                activeTab ===
-                "qr"
+                activeTab === "qr"
               }
               onClick={() =>
                 setActiveTab("qr")
@@ -408,38 +412,33 @@ function SettingsPage() {
       </div>
 
 
-      {activeTab ===
-      "general" ? (
+      {activeTab === "general" ? (
         <GeneralSettings
           settings={settings}
-          updateSetting={
-            updateSetting
+          updateSetting={updateSetting}
+
+          /*
+           * API / Redux driven store status
+           */
+          isStoreOpen={isStoreOpen}
+          onToggleStore={() =>
+            dispatch(
+              toggleMerchantStatus()
+            )
           }
-          saveSettings={
-            saveSettings
-          }
-          savedMessage={
-            savedMessage
-          }
-          qrTableId={
-            qrTableId
-          }
-          setQrTableId={
-            setQrTableId
-          }
+
+          saveSettings={saveSettings}
+          savedMessage={savedMessage}
+
+          qrTableId={qrTableId}
+          setQrTableId={setQrTableId}
+
           qrSize={qrSize}
-          setQrSize={
-            setQrSize
-          }
-          generatedQr={
-            generatedQr
-          }
-          generateQr={
-            generateQr
-          }
-          downloadQr={
-            downloadQr
-          }
+          setQrSize={setQrSize}
+
+          generatedQr={generatedQr}
+          generateQr={generateQr}
+          downloadQr={downloadQr}
           currentQrValue={
             getCurrentQrValue
           }
@@ -447,16 +446,10 @@ function SettingsPage() {
       ) : (
         <QrStudio
           settings={settings}
-          updateSetting={
-            updateSetting
-          }
+          updateSetting={updateSetting}
           theme={theme}
-          tableNumbers={
-            tableNumbers
-          }
-          printAllStands={
-            printAllStands
-          }
+          tableNumbers={tableNumbers}
+          printAllStands={printAllStands}
         />
       )}
 
@@ -472,11 +465,18 @@ function SettingsPage() {
 function GeneralSettings({
   settings,
   updateSetting,
+
+  isStoreOpen,
+  onToggleStore,
+
   saveSettings,
+
   qrTableId,
   setQrTableId,
+
   qrSize,
   setQrSize,
+
   generateQr,
   downloadQr,
   currentQrValue,
@@ -496,7 +496,7 @@ function GeneralSettings({
           border
           shadow-[0_3px_12px_rgba(50,40,30,0.035)]
           ${
-            settings.storeOpen
+            isStoreOpen
               ? "border-[#B9DED2] bg-[#F3FAF7]"
               : "border-[#E6BBB6] bg-[#FFF7F6]"
           }
@@ -515,15 +515,13 @@ function GeneralSettings({
               justify-center
               rounded-xl
               ${
-                settings.storeOpen
+                isStoreOpen
                   ? "bg-[#DFF1EB] text-[#287965]"
                   : "bg-[#F9E2DF] text-[#C44A40]"
               }
             `}
           >
-            <Store
-              size={16}
-            />
+            <Store size={16} />
           </div>
 
 
@@ -536,13 +534,13 @@ function GeneralSettings({
                   text-[12px]
                   font-bold
                   ${
-                    settings.storeOpen
+                    isStoreOpen
                       ? "text-[#287965]"
                       : "text-[#C44A40]"
                   }
                 `}
               >
-                {settings.storeOpen
+                {isStoreOpen
                   ? "Store is open"
                   : "Store is closed"}
               </h2>
@@ -557,13 +555,13 @@ function GeneralSettings({
                   uppercase
                   tracking-[0.08em]
                   ${
-                    settings.storeOpen
+                    isStoreOpen
                       ? "bg-[#DFF1EB] text-[#287965]"
                       : "bg-[#F9E2DF] text-[#C44A40]"
                   }
                 `}
               >
-                {settings.storeOpen
+                {isStoreOpen
                   ? "Accepting orders"
                   : "Orders paused"}
               </span>
@@ -571,7 +569,7 @@ function GeneralSettings({
             </div>
 
             <p className="mt-0.5 text-[9px] text-[#81766B]">
-              {settings.storeOpen
+              {isStoreOpen
                 ? "Customers can scan tables and place new orders."
                 : "New customer orders are currently paused."}
             </p>
@@ -579,14 +577,13 @@ function GeneralSettings({
           </div>
 
 
+          {/* IMPORTANT:
+              This calls the same Redux thunk as OwnerHeader.
+          */}
+
           <button
             type="button"
-            onClick={() =>
-              updateSetting(
-                "storeOpen",
-                !settings.storeOpen
-              )
-            }
+            onClick={onToggleStore}
             className={`
               flex
               h-8
@@ -598,18 +595,16 @@ function GeneralSettings({
               font-bold
               transition
               ${
-                settings.storeOpen
+                isStoreOpen
                   ? "bg-[#C84B41] text-white hover:bg-[#B63D35]"
                   : "bg-[#287965] text-white hover:bg-[#216955]"
               }
             `}
           >
 
-            <Power
-              size={12}
-            />
+            <Power size={12} />
 
-            {settings.storeOpen
+            {isStoreOpen
               ? "Pause store"
               : "Open store"}
 
@@ -807,9 +802,7 @@ function GeneralSettings({
             <div className="overflow-hidden rounded-xl border border-[#E8E0D6]">
 
               <PremiumToggleRow
-                icon={
-                  Smartphone
-                }
+                icon={Smartphone}
                 title="Digital payments"
                 description="UPI, cards and supported online payment methods."
                 checked={
@@ -824,9 +817,7 @@ function GeneralSettings({
               />
 
               <PremiumToggleRow
-                icon={
-                  Banknote
-                }
+                icon={Banknote}
                 title="Cash at counter"
                 description="Customers can reserve their token and pay at pickup."
                 checked={
@@ -933,9 +924,7 @@ function GeneralSettings({
               <div className="flex items-center gap-2">
 
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E6A23C] text-[#332511]">
-                  <Store
-                    size={13}
-                  />
+                  <Store size={13} />
                 </div>
 
                 <div>
@@ -1007,9 +996,7 @@ function GeneralSettings({
                 <div className="flex items-center gap-2">
 
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F4E5CD] text-[#C47712]">
-                    <QrCode
-                      size={13}
-                    />
+                    <QrCode size={13} />
                   </div>
 
                   <div>
@@ -1037,27 +1024,19 @@ function GeneralSettings({
 
             <div className="p-4">
 
-              {/* Controls */}
-
               <div className="space-y-2.5">
 
                 <PremiumField
                   label="Table ID / number"
-                  value={
-                    qrTableId
-                  }
+                  value={qrTableId}
                   placeholder="Blank = main outlet QR"
-                  onChange={
-                    setQrTableId
-                  }
+                  onChange={setQrTableId}
                 />
 
                 <PremiumSelect
                   label="Download quality"
                   value={qrSize}
-                  onChange={
-                    setQrSize
-                  }
+                  onChange={setQrSize}
                   options={[
                     [
                       "300",
@@ -1109,20 +1088,13 @@ function GeneralSettings({
                 </div>
 
 
-                {/* FIXED QR PREVIEW AREA
-                    The QR never uses qrSize for its CSS footprint.
-                    qrSize controls download output only.
-                */}
-
                 <div className="flex h-[218px] items-center justify-center p-4">
 
                   <div className="flex h-[174px] w-[174px] items-center justify-center rounded-[14px] border border-[#E3DBD1] bg-white p-3 shadow-[0_3px_12px_rgba(50,40,30,0.06)]">
 
                     <QRCodeCanvas
                       id="singleQrCanvas"
-                      value={
-                        currentQrValue
-                      }
+                      value={currentQrValue}
                       size={146}
                       level="H"
                       includeMargin
@@ -1137,18 +1109,12 @@ function GeneralSettings({
               </div>
 
 
-              {/* Generate */}
-
               <button
                 type="button"
-                onClick={
-                  generateQr
-                }
+                onClick={generateQr}
                 className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#292621] text-[9px] font-bold text-white transition hover:bg-[#1E1C19]"
               >
-                <QrCode
-                  size={12}
-                />
+                <QrCode size={12} />
 
                 Generate QR
               </button>
@@ -1156,14 +1122,10 @@ function GeneralSettings({
 
               <button
                 type="button"
-                onClick={
-                  downloadQr
-                }
+                onClick={downloadQr}
                 className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#E0D6CA] bg-white text-[9px] font-bold text-[#B97012] transition hover:bg-[#FFF9F0]"
               >
-                <Download
-                  size={12}
-                />
+                <Download size={12} />
 
                 Download PNG
               </button>
@@ -1210,9 +1172,7 @@ function GeneralSettings({
           <div className="flex min-w-0 items-center gap-2">
 
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#E8F5F0] text-[#287965]">
-              <Check
-                size={13}
-              />
+              <Check size={13} />
             </div>
 
             <p className="truncate text-[9px] font-semibold text-[#665C53]">
@@ -1223,14 +1183,10 @@ function GeneralSettings({
 
           <button
             type="button"
-            onClick={
-              saveSettings
-            }
+            onClick={saveSettings}
             className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#292621] px-3.5 text-[9px] font-bold text-white hover:bg-[#1E1C19]"
           >
-            <Save
-              size={12}
-            />
+            <Save size={12} />
 
             Save changes
           </button>
@@ -1258,16 +1214,12 @@ function QrStudio({
   return (
     <main className="mx-auto max-w-[1320px] px-5 pb-12 pt-5 lg:px-7">
 
-      {/* HEADER */}
-
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
 
         <div className="flex items-center gap-2.5">
 
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#292621] text-[#E6A23C]">
-            <QrCode
-              size={16}
-            />
+            <QrCode size={16} />
           </div>
 
           <div>
@@ -1287,14 +1239,10 @@ function QrStudio({
 
         <button
           type="button"
-          onClick={
-            printAllStands
-          }
+          onClick={printAllStands}
           className="flex h-9 items-center gap-1.5 rounded-lg bg-[#287965] px-3.5 text-[9px] font-bold text-white shadow-sm transition hover:bg-[#216955]"
         >
-          <Printer
-            size={12}
-          />
+          <Printer size={12} />
 
           Print all stands
         </button>
@@ -1311,9 +1259,7 @@ function QrStudio({
           <div className="flex items-center gap-2">
 
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F0EAE3] text-[#6C6258]">
-              <SlidersHorizontal
-                size={13}
-              />
+              <SlidersHorizontal size={13} />
             </div>
 
             <div>
@@ -1337,9 +1283,7 @@ function QrStudio({
 
           <PremiumField
             label="Table count"
-            value={
-              settings.tableCount
-            }
+            value={settings.tableCount}
             type="number"
             onChange={(value) => {
 
@@ -1362,9 +1306,7 @@ function QrStudio({
 
           <PremiumField
             label="Stand title"
-            value={
-              settings.standTitle
-            }
+            value={settings.standTitle}
             onChange={(value) =>
               updateSetting(
                 "standTitle",
@@ -1375,9 +1317,7 @@ function QrStudio({
 
           <PremiumSelect
             label="Brand theme"
-            value={
-              settings.brandTheme
-            }
+            value={settings.brandTheme}
             onChange={(value) =>
               updateSetting(
                 "brandTheme",
@@ -1443,9 +1383,7 @@ function QrStudio({
             <TableStand
               key={table}
               table={table}
-              settings={
-                settings
-              }
+              settings={settings}
               theme={theme}
             />
           )
@@ -1495,9 +1433,7 @@ function TableStand({
       >
 
         <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-          <Store
-            size={15}
-          />
+          <Store size={15} />
         </div>
 
         <h2 className="mt-2 break-words text-[17px] font-extrabold leading-tight tracking-[-0.02em]">
@@ -1530,7 +1466,7 @@ function TableStand({
         </div>
 
 
-        {/* FIXED QR CONTAINER */}
+        {/* QR */}
 
         <div className="mx-auto flex h-[194px] w-[194px] items-center justify-center rounded-[15px] border border-[#E1D9CF] bg-white p-3 shadow-[0_4px_15px_rgba(40,34,27,0.07)]">
 
@@ -1569,9 +1505,7 @@ function TableStand({
         }}
       >
 
-        <QrCode
-          size={10}
-        />
+        <QrCode size={10} />
 
         Powered by QRToken.in
 
@@ -1632,9 +1566,7 @@ function ControllerTab({
           }
         `}
       >
-        <Icon
-          size={13}
-        />
+        <Icon size={13} />
       </div>
 
       <div>
@@ -1671,8 +1603,10 @@ function StatusTile({
   const styles = {
     amber:
       "bg-[#F5E8D3] text-[#B97012]",
+
     green:
       "bg-[#E5F3EE] text-[#287965]",
+
     neutral:
       "bg-[#F0EAE3] text-[#6C6258]",
   };
@@ -1683,9 +1617,7 @@ function StatusTile({
       <div
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${styles[tone]}`}
       >
-        <Icon
-          size={13}
-        />
+        <Icon size={13} />
       </div>
 
       <div className="min-w-0">
@@ -1724,9 +1656,7 @@ function ControlPanel({
         <div className="flex items-center gap-2.5">
 
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F0EAE3] text-[#6C6258]">
-            <Icon
-              size={14}
-            />
+            <Icon size={14} />
           </div>
 
           <div>
@@ -1794,17 +1724,13 @@ function PremiumField({
               ? 0
               : undefined
           }
-          value={
-            value ?? ""
-          }
+          value={value ?? ""}
           onChange={(event) =>
             onChange(
               event.target.value
             )
           }
-          placeholder={
-            placeholder
-          }
+          placeholder={placeholder}
           className={`
             h-9
             w-full
@@ -1869,9 +1795,7 @@ function PremiumSelect({
       <div className="relative">
 
         <select
-          value={
-            value ?? ""
-          }
+          value={value ?? ""}
           onChange={(event) =>
             onChange(
               event.target.value
@@ -1943,9 +1867,7 @@ function PremiumTextarea({
 
       <textarea
         rows={3}
-        value={
-          value ?? ""
-        }
+        value={value ?? ""}
         onChange={(event) =>
           onChange(
             event.target.value
@@ -2027,9 +1949,7 @@ function PremiumToggleRow({
             }
           `}
         >
-          <Icon
-            size={13}
-          />
+          <Icon size={13} />
         </div>
 
         <div className="min-w-0">
