@@ -1,0 +1,399 @@
+{
+  "info": {
+    "name": "QRToken.in Complete API Suite",
+    "description": "Full production API collection for QRToken.in (Customer, Owner Console & Super Admin APIs)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://qrcode-ac0d.onrender.com/api",
+      "type": "string"
+    },
+    {
+      "key": "ownerToken",
+      "value": "YOUR_OWNER_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "YOUR_ADMIN_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "merchantId",
+      "value": "66a100000000000000000001",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "66a200000000000000000099",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "📱 1. Customer APIs",
+      "item": [
+        {
+          "name": "GET Public Menu by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/public/shree-krishna-tea-stall",
+              "host": ["{{baseUrl}}"],
+              "path": ["menu", "public", "shree-krishna-tea-stall"]
+            }
+          }
+        },
+        {
+          "name": "POST Place Customer Order (COD / Cash)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"tableNumber\": \"5\",\n  \"paymentMode\": \"cash\",\n  \"customerName\": \"Rahul Kumar\",\n  \"customerPhone\": \"9898112233\",\n  \"notes\": \"Extra hot, less sugar\",\n  \"items\": [\n    {\n      \"menuItem\": \"66a100000000000000000002\",\n      \"quantity\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "GET Track Live Order Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST Validate Coupon Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME50\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"orderAmount\": 200\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/coupons/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupons", "validate"]
+            }
+          }
+        },
+        {
+          "name": "GET Loyalty Points Balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/loyalty/9898112233?merchantId={{merchantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["loyalty", "9898112233"],
+              "query": [
+                { "key": "merchantId", "value": "{{merchantId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Create Razorpay Digital Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 150,\n  \"currency\": \"INR\",\n  \"receipt\": \"rcpt_order_101\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/create-razorpay-order",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "create-razorpay-order"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 2. Authentication",
+      "item": [
+        {
+          "name": "POST Owner Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@qrtoken.in\",\n  \"password\": \"owner123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "POST Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@qrtoken.in\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "POST Register Restaurant Outlet",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantName\": \"Chai Point - GTU\",\n  \"name\": \"Rajesh Kumar\",\n  \"email\": \"rajesh@chaipoint.com\",\n  \"password\": \"password123\",\n  \"phone\": \"9898112233\",\n  \"city\": \"Ahmedabad, Gujarat\",\n  \"gstin\": \"24AAAAA1234A1Z5\",\n  \"fssai\": \"10019021000123\",\n  \"role\": \"owner\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏪 3. Owner Console APIs",
+      "item": [
+        {
+          "name": "GET Merchant Profile & Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ownerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/merchant/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["merchant", "me"]
+            }
+          }
+        },
+        {
+          "name": "PUT Update Merchant Profile & Store Open Toggle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ownerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Shree Krishna Tea Stall\",\n  \"isOpen\": true,\n  \"phone\": \"+91 98765 43210\",\n  \"city\": \"Rajkot, Gujarat\",\n  \"gstin\": \"24AAAAA1234A1Z5\",\n  \"fssai\": \"10019021000123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/merchant/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["merchant", "me"]
+            }
+          }
+        },
+        {
+          "name": "POST Generate Table QR Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ownerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"slug\": \"shree-krishna-tea-stall\",\n  \"tableId\": \"5\",\n  \"size\": \"medium\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/merchant/generate-qr",
+              "host": ["{{baseUrl}}"],
+              "path": ["merchant", "generate-qr"]
+            }
+          }
+        },
+        {
+          "name": "GET Live Orders KDS Queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ownerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/merchant/{{merchantId}}?status=pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "merchant", "{{merchantId}}"],
+              "query": [
+                { "key": "status", "value": "pending" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT Update Order Status (Collected -> Auto Paid)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ownerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"collected\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "GET Full Menu Inventory Manager",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ownerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu/owner/{{merchantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["menu", "owner", "{{merchantId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST Add New Menu Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ownerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cold Coffee with Ice Cream\",\n  \"description\": \"Cold brewed coffee topped with vanilla ice cream\",\n  \"price\": 60,\n  \"category\": \"Cold Drinks\",\n  \"isVeg\": true,\n  \"isAvailable\": true,\n  \"stock\": 30,\n  \"image\": \"https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=500\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/menu/owner/{{merchantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["menu", "owner", "{{merchantId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET Store Analytics & Sales GMV",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{ownerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/{{merchantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "{{merchantId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👑 4. Super Admin APIs",
+      "item": [
+        {
+          "name": "GET Platform Executive Overview & MRR",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "overview"]
+            }
+          }
+        },
+        {
+          "name": "GET List All Merchants & Compliance",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/merchants",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "merchants"]
+            }
+          }
+        },
+        {
+          "name": "PUT Approve Merchant Verification KYC",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kycStatus\": \"approved\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/merchants/{{merchantId}}/kyc",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "merchants", "{{merchantId}}", "kyc"]
+            }
+          }
+        },
+        {
+          "name": "GET Platform Settings (GST 5%, SLAs, Fees)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

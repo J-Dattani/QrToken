@@ -1,6 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchMerchantOrders,
+  changeOrderStatus,
+} from "../redux/thunks/orderThunks";
 import {
   Search,
   Volume2,
@@ -12,6 +16,7 @@ import {
   Clock3,
   CreditCard,
   Banknote,
+  Phone,
   CheckCircle2,
   ChefHat,
   ReceiptText,
@@ -23,89 +28,115 @@ import {
   WalletCards,
 } from "lucide-react";
 
-const INITIAL_ORDERS = [
-  {
-    token: "A-023",
-    time: "3 min ago",
-    customer: "Guest",
-    orderType: "Counter Takeaway",
-    status: "PREPARING",
-    payment: "PAID",
-    paymentType: "digital",
-    items: [
-      { name: "Tea", qty: 2, price: 10 },
-      { name: "Samosa", qty: 1, price: 15 },
-    ],
-    amount: 35,
-  },
+function formatOrderTime(createdAt) {
+  if (!createdAt) return "";
 
-  {
-    token: "A-024",
-    time: "2 min ago",
-    customer: "Guest",
-    orderType: "Counter Takeaway",
-    status: "READY",
-    payment: "CASH PENDING",
-    paymentType: "cash",
-    items: [
-      { name: "Cutting Chai", qty: 3, price: 8 },
-    ],
-    amount: 24,
-  },
+  const created = new Date(createdAt);
+  const now = new Date();
 
-  {
-    token: "A-025",
-    time: "Just now",
-    customer: "Guest",
-    orderType: "Counter Takeaway",
-    status: "PREPARING",
-    payment: "PAID",
-    paymentType: "digital",
-    items: [
-      { name: "Biryani", qty: 1, price: 150 },
-      { name: "Lassi", qty: 1, price: 30 },
-    ],
-    amount: 180,
-  },
+  const diffMs = now - created;
+  const diffMinutes = Math.floor(diffMs / 60000);
 
-  {
-    token: "A-026",
-    time: "Just now",
-    customer: "Guest",
-    orderType: "Counter Takeaway",
-    status: "READY",
-    payment: "CASH PENDING",
-    paymentType: "cash",
-    items: [
-      { name: "Tea", qty: 2, price: 10 },
-      { name: "Samosa", qty: 1, price: 15 },
-    ],
-    amount: 35,
-  },
+  if (diffMinutes < 1) {
+    return "Just now";
+  }
 
-  {
-    token: "A-022",
-    time: "6 min ago",
-    customer: "Guest",
-    orderType: "Counter Takeaway",
-    status: "READY",
-    payment: "PAID",
-    paymentType: "digital",
-    items: [
-      { name: "Bun Maska", qty: 2, price: 8 },
-    ],
-    amount: 16,
-  },
-];
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours} hr ago`;
+  }
+
+  return created.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+function mapApiOrder(order) {
+  const paymentType =
+    order.payMode?.toLowerCase() === "cash"
+      ? "cash"
+      : "digital";
+
+  const payment =
+    paymentType === "cash" &&
+    order.paymentStatus === "pending"
+      ? "CASH PENDING"
+      : "PAID";
+
+  return {
+  id: order._id,
+  token: order.tokenNumber,
+  time: formatOrderTime(order.createdAt),
+
+  customer: order.customerName || "Guest",
+  phoneNumber: order.customerPhone || "",
+
+  orderType: order.tableId
+    ? `Table ${order.tableId}`
+    : "Counter Takeaway",
+
+  status: order.status?.toUpperCase(),
+
+  payment,
+  paymentType,
+
+  items: (order.items || []).map((item) => ({
+    name: item.name,
+    qty: item.quantity,
+    price: item.price,
+  })),
+
+  amount: order.total,
+
+  originalOrder: order,
+};
+}
 
 function LiveOrdersPage() {
-  const auth = useSelector((state) => state.auth);
+ const dispatch = useDispatch();
+const navigate = useNavigate();
 
-console.log("Redux Auth:", auth);
-  const navigate = useNavigate();
+const merchant = useSelector(
+  (state) => state.merchant.merchant
+);
 
-  const [soundOn, setSoundOn] = useState(true);
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
+const apiOrders = useSelector(
+  (state) => state.orders.orders
+);
+
+const orders = useMemo(
+  () =>
+    apiOrders
+      .map(mapApiOrder)
+      .filter(
+        (order) =>
+          order.status !== "COMPLETED" &&
+          order.status !== "COLLECTED"
+      ),
+  [apiOrders]
+);
+const [soundOn, setSoundOn] = useState(true);
+useEffect(() => {
+  if (!merchant?._id) return;
+
+  // Fetch immediately when page opens
+  dispatch(fetchMerchantOrders());
+
+  // Then keep checking for new/updated orders
+  const interval = setInterval(() => {
+    dispatch(fetchMerchantOrders());
+  }, 5000);
+
+  return () => {
+    clearInterval(interval);
+  };
+}, [dispatch, merchant?._id]);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -157,97 +188,113 @@ console.log("Redux Auth:", auth);
    * ORDER ACTION
    * ----------------------------------------------------
    */
+const handleOrderAction = async (order) => {
+  if (!order?.originalOrder?._id) {
+    console.error("Order ID not available");
+    return;
+  }
 
-  const handleOrderAction = (token) => {
-    setOrders((current) => {
-      return current
-        .map((order) => {
-          if (order.token !== token) {
-            return order;
-          }
+  let nextStatus = null;
 
-          /*
-           * PREPARING → READY
-           */
-          if (order.status === "PREPARING") {
-            return {
-              ...order,
-              status: "READY",
-            };
-          }
+  if (order.status === "RECEIVED") {
+    nextStatus = "preparing";
+  } else if (order.status === "PREPARING") {
+    nextStatus = "ready";
+  } else if (
+    order.status === "READY" &&
+    order.paymentType === "cash"
+  ) {
+    nextStatus = "collected";
+  } else if (
+    order.status === "READY" &&
+    order.paymentType === "digital"
+  ) {
+    nextStatus = "completed";
+  }
 
-          /*
-           * READY + CASH → COLLECTED
-           */
-          if (
-            order.status === "READY" &&
-            order.paymentType === "cash"
-          ) {
-            return null;
-          }
+  if (!nextStatus) {
+    return;
+  }
 
-          /*
-           * READY + PAID → COMPLETED
-           */
-          if (
-            order.status === "READY" &&
-            order.paymentType === "digital"
-          ) {
-            return null;
-          }
+  try {
+    await dispatch(
+      changeOrderStatus(
+        order.originalOrder._id,
+        nextStatus
+      )
+    );
 
-          return order;
-        })
-        .filter(Boolean);
-    });
+    await dispatch(fetchMerchantOrders());
 
     setSelectedOrder(null);
-  };
-
+  } catch (error) {
+    console.error(
+      "Failed to update order status:",
+      error
+    );
+  }
+};
   /*
    * ----------------------------------------------------
    * DETAILS MODAL ACTION
    * ----------------------------------------------------
    */
 
-  const handleDetailsAdvance = () => {
-    if (!selectedOrder) return;
+const handleDetailsAdvance = () => {
+  if (!selectedOrder) return;
 
-    handleOrderAction(selectedOrder.token);
-  };
-
+  handleOrderAction(selectedOrder);
+};
   /*
    * ----------------------------------------------------
    * ACTION CONFIG
    * ----------------------------------------------------
    */
+const getActionConfig = (order) => {
+  if (order.status === "RECEIVED") {
+    return {
+      label: "Start Preparing",
+      icon: ChefHat,
+      type: "preparing",
+    };
+  }
 
-  const getActionConfig = (order) => {
-    if (order.status === "PREPARING") {
-      return {
-        label: "Ready",
-        icon: CheckCircle2,
-        type: "ready",
-      };
-    }
+  if (order.status === "PREPARING") {
+    return {
+      label: "Ready",
+      icon: CheckCircle2,
+      type: "ready",
+    };
+  }
 
-    if (
-      order.status === "READY" &&
-      order.paymentType === "cash"
-    ) {
-      return {
-        label: "Collect",
-        icon: Banknote,
-        type: "collect",
-      };
-    }
+  if (
+    order.status === "READY" &&
+    order.paymentType === "cash"
+  ) {
+    return {
+      label: "Collect",
+      icon: Banknote,
+      type: "collect",
+    };
+  }
 
+  if (
+    order.status === "READY" &&
+    order.paymentType === "digital"
+  ) {
     return {
       label: "Complete",
       icon: CheckCircle2,
       type: "complete",
     };
+  }
+
+  return {
+    label: "Complete",
+    icon: CheckCircle2,
+    type: "complete",
   };
+};
 
   /*
    * ----------------------------------------------------
@@ -263,8 +310,40 @@ console.log("Redux Auth:", auth);
     (order) => order.status === "READY"
   ).length;
 
-  const receivedCount = 0;
+  const receivedCount = orders.filter(
+  (order) => order.status === "RECEIVED"
+).length;
 
+const paymentTotals = useMemo(() => {
+  const cash = orders
+    .filter((order) => order.paymentType === "cash")
+    .reduce(
+      (sum, order) => sum + Number(order.amount || 0),
+      0
+    );
+
+  const digital = orders
+    .filter((order) => order.paymentType === "digital")
+    .reduce(
+      (sum, order) => sum + Number(order.amount || 0),
+      0
+    );
+
+  const total = cash + digital;
+
+  return {
+    cash,
+    digital,
+    cashPercent:
+      total > 0
+        ? Math.round((cash / total) * 100)
+        : 0,
+    digitalPercent:
+      total > 0
+        ? Math.round((digital / total) * 100)
+        : 0,
+  };
+}, [orders]);
   /*
    * ----------------------------------------------------
    * UI
@@ -417,24 +496,25 @@ console.log("Redux Auth:", auth);
 
             <div className="flex items-center rounded-lg border border-[#E4D8C9] bg-white p-0.5">
 
-              {[
-                ["ALL", "All"],
-                ["PREPARING", "Preparing"],
-                ["READY", "Ready"],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setStatusFilter(value)}
-                  className={`rounded-md px-3 py-1.5 text-[11px] font-medium transition ${
-                    statusFilter === value
-                      ? "bg-[#282521] text-white shadow-sm"
-                      : "text-[#74695D] hover:bg-[#F5EFE7]"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+             {[
+  ["ALL", "All"],
+  ["RECEIVED", "Received"],
+  ["PREPARING", "Preparing"],
+  ["READY", "Ready"],
+].map(([value, label]) => (
+  <button
+    key={value}
+    type="button"
+    onClick={() => setStatusFilter(value)}
+    className={`rounded-md px-3 py-1.5 text-[11px] font-medium transition ${
+      statusFilter === value
+        ? "bg-[#282521] text-white shadow-sm"
+        : "text-[#74695D] hover:bg-[#F5EFE7]"
+    }`}
+  >
+    {label}
+  </button>
+))}
 
             </div>
 
@@ -511,9 +591,9 @@ console.log("Redux Auth:", auth);
                     index === filteredOrders.length - 1
                   }
                   actionConfig={getActionConfig(order)}
-                  onAction={() =>
-                    handleOrderAction(order.token)
-                  }
+                onAction={() =>
+  handleOrderAction(order)
+}
                   onDetails={() =>
                     setSelectedOrder(order)
                   }
@@ -536,12 +616,14 @@ console.log("Redux Auth:", auth);
             SERVICE PULSE
         ================================================= */}
 
-        <ServicePulse
-          active={orders.length}
-          received={receivedCount}
-          preparing={preparingCount}
-          ready={readyCount}
-        />
+       <ServicePulse
+  active={orders.length}
+  received={receivedCount}
+  preparing={preparingCount}
+  ready={readyCount}
+  cashPercent={paymentTotals.cashPercent}
+  digitalPercent={paymentTotals.digitalPercent}
+/>
 
       </div>
 
@@ -635,80 +717,103 @@ function OrderRow({
           : ""
       }`}
     >
+{/* Accent */}
+<div
+  className={`absolute bottom-0 left-0 top-0 w-[3px] ${accentColor}`}
+/>
 
-      {/* Accent */}
+{/* Token */}
+<button
+  type="button"
+  onClick={onDetails}
+  className="w-[88px] shrink-0 text-left"
+>
+  <p className="font-mono text-[16px] font-semibold tracking-tight text-[#302A24]">
+    {order.token}
+  </p>
 
-      <div
-        className={`absolute bottom-0 left-0 top-0 w-[3px] ${accentColor}`}
+  <p className="mt-0.5 text-[10px] text-[#A09588]">
+    {order.time}
+  </p>
+</button>
+
+{/* Orderer information */}
+<button
+  type="button"
+  onClick={onDetails}
+  className="text-left"
+>
+<div className="w-[125px] shrink-0 text-left lg:w-[145px]">
+  <p className="truncate text-[11px] font-semibold text-[#373028]">
+    {order.customer}
+  </p>
+
+  {order.phoneNumber ? (
+    <a
+      href={`tel:${order.phoneNumber}`}
+      className="mt-0.5 flex w-fit items-center gap-1 text-[10px] text-[#A09588] transition-colors hover:text-[#C47B1C]"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <Phone
+        size={9}
+        strokeWidth={2}
+        className="shrink-0"
       />
 
+      <span>{order.phoneNumber}</span>
+    </a>
+  ) : (
+    <p className="mt-0.5 text-[10px] text-[#A09588]">
+      N/A
+    </p>
+  )}
+</div>
+</button>
 
-      {/* Token */}
+{/* Order information */}
+<button
+  type="button"
+  onClick={onDetails}
+  className="min-w-0 flex-1 text-left"
+>
+  <p className="truncate text-[11px] font-semibold text-[#373028]">
+    {order.items
+      .map(
+        (item) =>
+          `${item.name} ×${item.qty}`
+      )
+      .join(", ")}
+  </p>
 
-      <button
-        type="button"
-        onClick={onDetails}
-        className="w-[68px] shrink-0 text-left"
-      >
+  <div className="mt-1.5 flex items-center gap-1.5">
+    <span
+      className={`rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide ${
+        order.paymentType === "digital"
+          ? "bg-[#E5F4EF] text-[#21715E]"
+          : "bg-[#FFF0D3] text-[#A5660A]"
+      }`}
+    >
+      {order.payment}
+    </span>
 
-        <p className="font-mono text-[16px] font-semibold tracking-tight text-[#302A24]">
-          {order.token}
-        </p>
+    <span className="text-[#B3A79A]">
+      ·
+    </span>
 
-        <p className="mt-0.5 text-[10px] text-[#A09588]">
-          {order.time}
-        </p>
-
-      </button>
-
-
-      {/* Order information */}
-
-      <button
-        type="button"
-        onClick={onDetails}
-        className="min-w-0 flex-1 text-left"
-      >
-
-        <p className="truncate text-[11px] font-semibold text-[#373028]">
-          {order.items
-            .map(
-              (item) =>
-                `${item.name} ×${item.qty}`
-            )
-            .join(", ")}
-        </p>
-
-
-        <div className="mt-1.5 flex items-center gap-1.5">
-
-          <span
-            className={`rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide ${
-              order.paymentType === "digital"
-                ? "bg-[#E5F4EF] text-[#21715E]"
-                : "bg-[#FFF0D3] text-[#A5660A]"
-            }`}
-          >
-            {order.payment}
-          </span>
-
-          <span className="text-[#B3A79A]">
-            ·
-          </span>
-
-          <span
-            className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${statusColor}`}
-          >
-            {order.status}
-          </span>
-
-        </div>
-
-      </button>
-
+    <span
+      className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${statusColor}`}
+    >
+      {order.status}
+    </span>
+  </div>
+</button>
 
       {/* Mini progress */}
-
+<button
+  type="button"
+  onClick={onDetails}
+  className="text-left"
+>
       <div className="hidden w-[125px] items-center gap-1.5 lg:flex">
 
         <div
@@ -737,10 +842,14 @@ function OrderRow({
         />
 
       </div>
-
+</button>
 
       {/* Amount */}
-
+<button
+  type="button"
+  onClick={onDetails}
+  className="text-left"
+>
       <div className="w-[55px] shrink-0 text-right">
 
         <p className="text-[13px] font-semibold text-[#302A24]">
@@ -752,21 +861,22 @@ function OrderRow({
         </p>
 
       </div>
-
+</button>
 
       {/* SMART ACTION */}
 
       <button
         type="button"
         onClick={onAction}
-        className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[11px] font-semibold transition ${
-          actionConfig.type === "ready"
-            ? "bg-[#F2E1C7] text-[#9C5F0E] hover:bg-[#EBD4B0]"
-            : actionConfig.type === "collect"
-            ? "bg-[#292622] text-white hover:bg-[#171512]"
-            : "bg-[#E4F3EE] text-[#20705C] hover:bg-[#D6EDE5]"
-        }`}
-      >
+       className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[11px] font-semibold transition ${
+  actionConfig.type === "preparing"
+    ? "bg-[#F2E1C7] text-[#9C5F0E] hover:bg-[#EBD4B0]"
+    : actionConfig.type === "ready"
+    ? "bg-[#E4F3EE] text-[#20705C] hover:bg-[#D6EDE5]"
+    : actionConfig.type === "collect"
+    ? "bg-[#292622] text-white hover:bg-[#171512]"
+    : "bg-[#E4F3EE] text-[#20705C] hover:bg-[#D6EDE5]"
+}`}>
         <ActionIcon size={13} />
 
         <span className="hidden sm:inline">
@@ -800,7 +910,11 @@ function ServicePulse({
   received,
   preparing,
   ready,
+  cashPercent,
+  digitalPercent,
 }) {
+ 
+
   return (
     <aside className="overflow-hidden rounded-xl border border-[#302D29] bg-[#282622] text-white shadow-sm">
 
@@ -886,16 +1000,15 @@ function ServicePulse({
         </p>
 
         <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10">
+<div
+  className="bg-[#E6A23C]"
+  style={{ width: `${digitalPercent}%` }}
+/>
 
-          <div
-            className="bg-[#E6A23C]"
-            style={{ width: "66%" }}
-          />
-
-          <div
-            className="bg-[#54B996]"
-            style={{ width: "34%" }}
-          />
+<div
+  className="bg-[#54B996]"
+  style={{ width: `${cashPercent}%` }}
+/>
 
         </div>
 
@@ -905,18 +1018,18 @@ function ServicePulse({
             <span className="mr-1 text-[#E6A23C]">
               ●
             </span>
-            Digital <strong className="text-white">
-              66%
-            </strong>
+           Digital <strong className="text-white">
+  {digitalPercent}%
+</strong>
           </span>
 
           <span className="text-white/50">
             <span className="mr-1 text-[#54B996]">
               ●
             </span>
-            Cash <strong className="text-white">
-              34%
-            </strong>
+         Cash <strong className="text-white">
+  {cashPercent}%
+</strong>
           </span>
 
         </div>
@@ -1073,6 +1186,19 @@ function OrderDetailsModal({
                 <p className="mt-0.5 text-xs font-semibold text-[#302A24]">
                   {order.customer}
                 </p>
+                 {order.phoneNumber ? (
+    <a
+      href={`tel:${order.phoneNumber}`}
+      className="mt-0.5 flex w-fit items-center gap-1 text-[10px] text-[#A09588] transition-colors hover:text-[#C47B1C]"
+    >
+      <Phone size={9} strokeWidth={2} className="shrink-0" />
+      <span>{order.phoneNumber}</span>
+    </a>
+  ) : (
+    <p className="mt-0.5 text-[10px] text-[#A09588]">
+      N/A
+    </p>
+  )}
 
               </div>
 
@@ -1248,11 +1374,13 @@ function OrderDetailsModal({
           >
             <ActionIcon size={14} />
 
-            {actionConfig.type === "ready"
-              ? "Advance to Ready"
-              : actionConfig.type === "collect"
-              ? "Collect Payment"
-              : "Complete Order"}
+            {actionConfig.type === "preparing"
+  ? "Start Preparing"
+  : actionConfig.type === "ready"
+  ? "Advance to Ready"
+  : actionConfig.type === "collect"
+  ? "Collect Payment"
+  : "Complete Order"}
 
             <ArrowRight size={13} />
 

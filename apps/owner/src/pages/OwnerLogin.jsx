@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { loginOwner } from "../api/authApi";
+import { saveAuthSession } from "../utils/authStorage";
 
 import {
   ArrowRight,
@@ -64,15 +65,14 @@ function OwnerLogin() {
 
       const { token, user } = result;
 
-      localStorage.setItem(
-        "ownerToken",
-        token
-      );
+      saveAuthSession(token, user, rememberMe);
 
-      localStorage.setItem(
-        "ownerUser",
-        JSON.stringify(user)
-      );
+dispatch(
+  loginSuccess({
+    token,
+    user,
+  })
+);
 
       dispatch(loginSuccess({ user, token }));
 

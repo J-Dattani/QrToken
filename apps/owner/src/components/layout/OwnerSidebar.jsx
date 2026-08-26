@@ -26,7 +26,11 @@ import {
 
 import { NavLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "../../redux/slices/authSlice";
+import { clearAuthSession } from "../../utils/authStorage";
 
+ 
 const navigation = [
   {
     section: "OPERATIONS",
@@ -100,7 +104,12 @@ const navigation = [
 
 
 function OwnerSidebar() {
+   const merchant = useSelector(
+  (state) => state.merchant.merchant
+); 
+
  const navigate = useNavigate(); 
+  const dispatch = useDispatch();
   return (
     <Box
       component="aside"
@@ -119,6 +128,7 @@ function OwnerSidebar() {
         borderRight: "1px solid rgba(255,255,255,0.055)",
       }}
     >
+
       {/* =====================================================
           INDEPENDENT SIDEBAR SCROLL
           ===================================================== */}
@@ -595,7 +605,7 @@ function OwnerSidebar() {
                   lineHeight: 1.25,
                 }}
               >
-                Shree Krishna Tea Stall
+               {merchant?.name}
               </Typography>
 
               <Typography
@@ -608,7 +618,7 @@ function OwnerSidebar() {
                   lineHeight: 1.2,
                 }}
               >
-                Rajkot, Gujarat · Starter
+                 {merchant?.city} ·{merchant?.plan}
               </Typography>
             </Box>
           </Box>
@@ -626,9 +636,15 @@ function OwnerSidebar() {
         >
           <ListItemButton
             disableRipple
-            onClick={() => {
-              // Logout logic later
-              navigate("/");}}
+          onClick={() => {
+  clearAuthSession();
+
+  dispatch(logout());
+
+  navigate("/", {
+    replace: true,
+  });
+}}
             sx={{
               minHeight: 37,
 

@@ -7,11 +7,16 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { registerOwner } from "../api/authApi";
 
 function OwnerRegister() {
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [form, setForm] = useState({
     outletName: "",
@@ -33,12 +38,31 @@ function OwnerRegister() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // Static for now.
-    // API/authentication will be connected later.
-    navigate("/");
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      await registerOwner(form);
+
+      setSuccess(
+        "Owner account created successfully. Please sign in."
+      );
+
+      setTimeout(() => {
+        navigate("/");
+      }, 1200);
+    } catch (error) {
+      setError(
+        error.message ||
+          "Unable to create owner account. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -79,7 +103,6 @@ function OwnerRegister() {
         />
 
       </div>
-
 
       {/* =====================================================
           REGISTER PANEL
@@ -144,7 +167,6 @@ function OwnerRegister() {
 
               </div>
 
-
               {/* Secure */}
 
               <div
@@ -171,7 +193,6 @@ function OwnerRegister() {
               </div>
 
             </div>
-
 
             {/* Title */}
 
@@ -211,21 +232,39 @@ function OwnerRegister() {
               </div>
 
               <p className="mt-2 text-[11px] text-[#80766B] sm:text-[12px]">
-                Create your restaurant workspace for QR ordering and counter operations.
+                Create your restaurant workspace for QR ordering and counter
+                operations.
               </p>
 
             </div>
 
           </div>
 
-
           {/* =================================================
-              FORM CONTENT
+              FORM
               ================================================= */}
 
           <form onSubmit={handleSubmit}>
 
-            <div className="border-t border-[#E9E0D7] px-6 py-4.5 sm:px-8">
+            {/* Error / Success */}
+
+            {error && (
+              <div className="mx-6 mb-4 rounded-[10px] border border-[#E7B8B3] bg-[#FFF1EF] px-3.5 py-3 text-[11px] font-semibold text-[#C23F38] sm:mx-8">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="mx-6 mb-4 rounded-[10px] border border-[#B9DED2] bg-[#EFF9F5] px-3.5 py-3 text-[11px] font-semibold text-[#277C68] sm:mx-8">
+                {success}
+              </div>
+            )}
+
+            {/* =================================================
+                FORM FIELDS
+                ================================================= */}
+
+            <div className="px-6 pb-5 sm:px-8">
 
               {/* =================================================
                   OUTLET
@@ -279,7 +318,6 @@ function OwnerRegister() {
 
               </CompactSection>
 
-
               {/* =================================================
                   ACCOUNT
                   ================================================= */}
@@ -311,7 +349,6 @@ function OwnerRegister() {
                 </div>
 
               </CompactSection>
-
 
               {/* =================================================
                   BUSINESS
@@ -348,7 +385,6 @@ function OwnerRegister() {
 
             </div>
 
-
             {/* =================================================
                 ACTION BAR
                 ================================================= */}
@@ -367,33 +403,34 @@ function OwnerRegister() {
               <div className="flex items-center justify-between gap-4">
 
                 {/* Login */}
-                <span className="ml-1">
-                Already registered?
-                <button
-                  type="button"
-                  onClick={() => navigate("/")}
-                  className="
-                    shrink-0
-                    rounded-[9px]
-                    px-2
-                    py-2
-                    text-[11px]
-                    font-semibold
-                    text-[#6D635A]
-                    transition
-                    hover:text-[#A66B17]
-                  "
-                >
-                Sign in
-                </button>
-                </span>
-               
 
+                <span className="ml-1 text-[11px] text-[#6D635A]">
+                  Already registered?
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/")}
+                    className="
+                      shrink-0
+                      rounded-[9px]
+                      px-2
+                      py-2
+                      text-[11px]
+                      font-semibold
+                      text-[#6D635A]
+                      transition
+                      hover:text-[#A66B17]
+                    "
+                  >
+                    Sign in
+                  </button>
+                </span>
 
                 {/* Create */}
 
                 <button
                   type="submit"
+                  disabled={loading}
                   className="
                     group
                     flex
@@ -414,16 +451,22 @@ function OwnerRegister() {
                     hover:bg-[#332E28]
                     hover:shadow-[0_8px_20px_rgba(38,33,28,0.19)]
                     active:scale-[0.99]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
                     sm:px-6
                   "
                 >
-                  Create Owner Account
+                  {loading
+                    ? "Creating account..."
+                    : "Create Owner Account"}
 
-                  <ArrowRight
-                    size={14}
-                    strokeWidth={2.3}
-                    className="transition-transform duration-150 group-hover:translate-x-0.5"
-                  />
+                  {!loading && (
+                    <ArrowRight
+                      size={14}
+                      strokeWidth={2.3}
+                      className="transition-transform duration-150 group-hover:translate-x-0.5"
+                    />
+                  )}
                 </button>
 
               </div>
@@ -439,7 +482,6 @@ function OwnerRegister() {
     </div>
   );
 }
-
 
 /* =============================================================
    COMPACT SECTION
@@ -516,7 +558,6 @@ function CompactSection({
   );
 }
 
-
 /* =============================================================
    PREMIUM FIELD
    ============================================================= */
@@ -589,7 +630,6 @@ function PremiumField({
   );
 }
 
-
 /* =============================================================
    PASSWORD
    ============================================================= */
@@ -657,7 +697,9 @@ function PasswordField({
 
         <button
           type="button"
-          onClick={() => setShowPassword((previous) => !previous)}
+          onClick={() =>
+            setShowPassword((previous) => !previous)
+          }
           aria-label={
             showPassword
               ? "Hide password"
@@ -692,6 +734,5 @@ function PasswordField({
     </div>
   );
 }
-
 
 export default OwnerRegister;

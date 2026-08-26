@@ -47,16 +47,20 @@ const isStoreOpen = merchant?.isOpen ?? false;
     <header className="shrink-0 border-b border-[#E5D8C8] bg-[#F7F3ED] px-5 py-2.5 lg:px-7">
       <div className="flex min-h-[52px] items-center justify-between gap-5">
         <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-          <h1 className="truncate text-[18px] font-bold tracking-[-0.02em] text-[#241F1A] lg:text-[19px]">
-          {merchant?.name}
-          </h1>
-            <span className="hidden h-1 w-1 shrink-0 rounded-full bg-[#C8BDAF] sm:block" />
+         <div className="flex items-center gap-2.5">
+  <h1 className="truncate text-[18px] font-bold tracking-[-0.02em] text-[#241F1A] lg:text-[19px]">
+    {merchant?.name}
+  </h1>
+  
+  {/* Dot separator */}
+  <span className="hidden h-1 w-1 shrink-0 rounded-full bg-[#C8BDAF] sm:block" />
 
-            <span className="hidden shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8A8074] sm:block">
-              Owner Dashboard
-            </span>
-          </div>
+  {/* Changed sm:block to sm:inline-block to prevent line jumping */}
+  <span className="hidden shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8A8074] sm:inline-block">
+    {merchant?.tagline}
+  </span>
+</div>
+
 
           <div className="mt-0.5 flex min-w-0 items-center gap-2">
             <h2 className="truncate text-[13px] font-semibold text-[#3B342D]">

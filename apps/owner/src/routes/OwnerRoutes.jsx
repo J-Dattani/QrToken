@@ -20,6 +20,7 @@ import SettingsPage from "../pages/SettingsPage";
 import ApiTestPage from "../pages/ApiTestPage";
 import OwnerLogin from "../pages/OwnerLogin";
 import OwnerRegister from "../pages/OwnerRegister";
+import ProtectedOwnerRoute from "./ProtectedOwnerRoute";
 
 function OwnerRoutes() {
   return (
@@ -50,11 +51,12 @@ function OwnerRoutes() {
   element={<ApiTestPage />}
 />
 
-      <Route
-        path="/owner"
-        element={<OwnerLayout />}
-      >
+    <Route element={<ProtectedOwnerRoute />}>
 
+  <Route
+    path="/owner"
+    element={<OwnerLayout />}
+  >
         {/* DEFAULT OWNER PAGE */}
         <Route
           index
@@ -158,7 +160,7 @@ function OwnerRoutes() {
           />
         }
       />
-
+</Route>
     </Routes>
   );
 }
