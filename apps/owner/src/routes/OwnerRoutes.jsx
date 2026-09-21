@@ -21,6 +21,7 @@ import ApiTestPage from "../pages/ApiTestPage";
 import OwnerLogin from "../pages/OwnerLogin";
 import OwnerRegister from "../pages/OwnerRegister";
 import ProtectedOwnerRoute from "./ProtectedOwnerRoute";
+import OrderHistoryPage from "../pages/OrderHistoryPage";
 
 function OwnerRoutes() {
   return (
@@ -86,6 +87,12 @@ function OwnerRoutes() {
           path="tables"
           element={<TableSessionsPage />}
         />
+
+        {/* ORDER HISTORY */}
+<Route
+  path="history"
+  element={<OrderHistoryPage />}
+/>
 
         {/* CASH MANAGEMENT */}
         <Route

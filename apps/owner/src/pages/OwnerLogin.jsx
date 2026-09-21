@@ -19,29 +19,24 @@ import {
   Link,
   useNavigate,
 } from "react-router-dom";
+
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../redux/slices/authSlice";
 
-
 function OwnerLogin() {
-  
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
   const [email, setEmail] = useState("");
-  const [password, setPassword] =
-    useState("");
+  const [password, setPassword] = useState("");
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [rememberMe, setRememberMe] =
-    useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
-  const [isLoading, setIsLoading] =
-    useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -65,35 +60,35 @@ function OwnerLogin() {
 
       const { token, user } = result;
 
-      saveAuthSession(token, user, rememberMe);
+      // Save token/user according to Remember Me
+      saveAuthSession(
+        token,
+        user,
+        rememberMe
+      );
 
-dispatch(
-  loginSuccess({
-    token,
-    user,
-  })
-);
+      // Update Redux auth state
+      dispatch(
+        loginSuccess({
+          token,
+          user,
+        })
+      );
 
-      dispatch(loginSuccess({ user, token }));
-
-      navigate("/owner/orders");
+      // Go to Owner Console
+      navigate("/owner/orders", {
+        replace: true,
+      });
 
     } catch (error) {
       setError(
         error.message ||
-        "Unable to sign in. Please check your credentials."
+          "Unable to sign in. Please check your credentials."
       );
     } finally {
       setIsLoading(false);
     }
   };
-
-  const useDemoAccount = () => {
-    setEmail("owner@qrtoken.in");
-    setPassword("demo1234");
-    setError("");
-  };
-
 
   return (
     <main className="min-h-screen bg-[#F7F3ED] text-[#29251F]">
@@ -116,19 +111,24 @@ dispatch(
           >
 
             <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#292621] text-[#E6A23C] shadow-[0_4px_12px_rgba(41,38,33,0.10)] transition group-hover:-translate-y-0.5">
+
               <QrCode
                 size={17}
                 strokeWidth={2.2}
               />
+
             </div>
 
             <div>
 
               <p className="text-[16px] font-black tracking-[-0.04em] text-[#29251F]">
+
                 QRToken
+
                 <span className="text-[#C47A18]">
                   .in
                 </span>
+
               </p>
 
               <p className="mt-[-1px] text-[7px] font-bold uppercase tracking-[0.15em] text-[#93877B]">
@@ -173,9 +173,11 @@ dispatch(
               <div className="mb-7">
 
                 <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#F4E5CD] text-[#B97012]">
+
                   <LockKeyhole
                     size={16}
                   />
+
                 </div>
 
                 <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#B07827]">
@@ -200,9 +202,11 @@ dispatch(
                 <div className="mb-4 flex items-start gap-2 rounded-[10px] border border-[#E8B9B4] bg-[#FFF5F3] px-3 py-2.5">
 
                   <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#D9574D] text-white">
+
                     <span className="text-[9px] font-black">
                       !
                     </span>
+
                   </div>
 
                   <p className="text-[9px] font-semibold leading-4 text-[#B33F37]">
@@ -213,12 +217,16 @@ dispatch(
               )}
 
 
-              {/* FORM */}
+              {/* =================================================
+                  FORM
+              ================================================= */}
 
               <form
                 onSubmit={handleSubmit}
                 className="space-y-4"
               >
+
+                {/* Email */}
 
                 <AuthField
                   label="Email address"
@@ -230,6 +238,8 @@ dispatch(
                   autoComplete="email"
                 />
 
+
+                {/* Password */}
 
                 <AuthField
                   label="Password"
@@ -259,6 +269,7 @@ dispatch(
                           : "Show password"
                       }
                     >
+
                       {showPassword ? (
                         <EyeOff
                           size={14}
@@ -268,12 +279,15 @@ dispatch(
                           size={14}
                         />
                       )}
+
                     </button>
                   }
                 />
 
 
-                {/* Remember / forgot */}
+                {/* =================================================
+                    REMEMBER / FORGOT
+                ================================================= */}
 
                 <div className="flex items-center justify-between gap-3 pt-0.5">
 
@@ -307,12 +321,14 @@ dispatch(
                         }
                       `}
                     >
+
                       {rememberMe && (
                         <CheckCircle2
                           size={11}
                           strokeWidth={3}
                         />
                       )}
+
                     </button>
 
                     <span className="text-[12px] font-semibold text-[#766B61]">
@@ -337,7 +353,9 @@ dispatch(
                 </div>
 
 
-                {/* Submit */}
+                {/* =================================================
+                    SUBMIT
+                ================================================= */}
 
                 <button
                   type="submit"
@@ -370,18 +388,22 @@ dispatch(
 
                   {isLoading ? (
                     <>
+
                       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
 
                       Signing you in...
+
                     </>
                   ) : (
                     <>
+
                       Sign in to Owner Console
 
                       <ArrowRight
                         size={13}
                         className="transition-transform group-hover:translate-x-0.5"
                       />
+
                     </>
                   )}
 
@@ -390,49 +412,9 @@ dispatch(
               </form>
 
 
-              {/* DEMO */}
-
-              <div className="mt-5 rounded-[11px] border border-[#E8DED3] bg-[#FCFAF7] p-3">
-
-                <div className="flex items-start justify-between gap-3">
-
-                  <div className="flex min-w-0 items-start gap-2">
-
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F2E7D7] text-[#B97012]">
-                      <SparklesIcon />
-                    </div>
-
-                    <div className="min-w-0">
-
-                      <p className="text-[9px] font-bold text-[#514941]">
-                        Demo access
-                      </p>
-
-                      <p className="mt-0.5 text-[8px] leading-3.5 text-[#93887D]">
-                        Explore the owner console with sample restaurant data.
-                      </p>
-
-                    </div>
-
-                  </div>
-
-
-                  <button
-                    type="button"
-                    onClick={
-                      useDemoAccount
-                    }
-                    className="shrink-0 rounded-lg border border-[#E0D3C5] bg-white px-2.5 py-1.5 text-[8px] font-bold text-[#B97012] transition hover:bg-[#FFF8EE]"
-                  >
-                    Use demo
-                  </button>
-
-                </div>
-
-              </div>
-
-
-              {/* Register */}
+              {/* =================================================
+                  REGISTER
+              ================================================= */}
 
               <div className="mt-6 flex items-center justify-center gap-1.5">
 
@@ -444,11 +426,13 @@ dispatch(
                   to="/register"
                   className="flex items-center gap-1 text-[12px] font-bold text-[#29251F] transition hover:text-[#B97012]"
                 >
+
                   Register your outlet
 
                   <ArrowRight
                     size={12}
                   />
+
                 </Link>
 
               </div>
@@ -473,16 +457,20 @@ dispatch(
 
               <div className="relative flex h-full flex-col justify-between p-8">
 
-                {/* Top */}
+                {/* =================================================
+                    TOP
+                ================================================= */}
 
                 <div>
 
                   <div className="flex items-center justify-between">
 
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E6A23C] text-[#332511]">
+
                       <Store
                         size={14}
                       />
+
                     </div>
 
                     <span className="rounded-full border border-white/[0.09] bg-white/[0.04] px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.12em] text-[#B9B0A8]">
@@ -497,11 +485,14 @@ dispatch(
                   </p>
 
                   <h2 className="mt-2 max-w-[320px] text-[25px] font-black leading-[1.08] tracking-[-0.04em] text-white">
+
                     Everything behind the counter.
+
                     <span className="text-[#E6A23C]">
                       {" "}
                       One place.
                     </span>
+
                   </h2>
 
                   <p className="mt-3 max-w-[315px] text-[10px] leading-5 text-[#A59D95]">
@@ -513,7 +504,9 @@ dispatch(
                 </div>
 
 
-                {/* Operational preview */}
+                {/* =================================================
+                    OPERATIONAL PREVIEW
+                ================================================= */}
 
                 <div className="my-8">
 
@@ -580,7 +573,9 @@ dispatch(
                 </div>
 
 
-                {/* Bottom benefits */}
+                {/* =================================================
+                    BOTTOM BENEFITS
+                ================================================= */}
 
                 <div className="space-y-2.5">
 
@@ -619,11 +614,9 @@ dispatch(
 
           <span className="h-1 w-1 rounded-full bg-[#CFC4B9]" />
 
-          <span className="flex items-center gap-1 ">
+          <span>
             Owner access
           </span>
-
-         
 
           <span>
             Secure workspace
@@ -662,10 +655,12 @@ function AuthField({
       <div className="relative">
 
         <div className="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 items-center justify-center text-[#9A8E82]">
+
           <Icon
             size={14}
             strokeWidth={1.9}
           />
+
         </div>
 
         <input
@@ -676,12 +671,8 @@ function AuthField({
               event.target.value
             )
           }
-          placeholder={
-            placeholder
-          }
-          autoComplete={
-            autoComplete
-          }
+          placeholder={placeholder}
+          autoComplete={autoComplete}
           className={`
             h-11
             w-full
@@ -775,9 +766,11 @@ function FeatureLine({
     <div className="flex items-center gap-2">
 
       <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#55C5A6]/10 text-[#55C5A6]">
+
         <CheckCircle2
           size={11}
         />
+
       </div>
 
       <span className="text-[8px] font-semibold text-[#B6AEA7]">
@@ -790,16 +783,8 @@ function FeatureLine({
 
 
 /* =============================================================
-   SMALL ICON HELPERS
+   ACTIVITY ICON
 ============================================================= */
-
-function SparklesIcon() {
-  return (
-    <Sparkles
-      size={13}
-    />
-  );
-}
 
 function ActivityIcon() {
   return (
@@ -814,27 +799,6 @@ function ActivityIcon() {
       strokeLinejoin="round"
     >
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-  );
-}
-
-function Sparkles({
-  size = 13,
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m12 3-1.5 4.5L6 9l4.5 1.5L12 15l1.5-4.5L18 9l-4.5-1.5L12 3Z" />
-      <path d="m19 14-.8 2.2L16 17l2.2.8L19 20l.8-2.2L22 17l-2.2-.8L19 14Z" />
-      <path d="m5 3-.6 1.6L3 5l1.4.4L5 7l.6-1.6L7 5l-1.4-.4L5 3Z" />
     </svg>
   );
 }
