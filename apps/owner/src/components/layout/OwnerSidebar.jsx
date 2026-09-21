@@ -20,6 +20,7 @@ import {
   LocalOfferRounded,
   BarChartRounded,
   SettingsRounded,
+  HistoryRounded,
   LogoutRounded,
   FiberManualRecordRounded,
 } from "@mui/icons-material";
@@ -56,6 +57,11 @@ const navigation = [
         icon: TableRestaurantRounded,
         path: "/owner/tables",
       },
+      {
+      label: "Order History",
+      icon: HistoryRounded,
+      path: "/owner/history",
+    },
     ],
   },
 
