@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Download,
@@ -13,116 +13,156 @@ import {
   Activity,
   ReceiptText,
   CircleDollarSign,
+  AlertCircle,
 } from "lucide-react";
-
-const ANALYTICS_DATA = [
-  {
-    period: "Wed 12",
-    date: "2026-08-12",
-    orders: 8,
-    revenue: 721,
-    digital: 2,
-    cash: 6,
-  },
-  {
-    period: "Thu 13",
-    date: "2026-08-13",
-    orders: 20,
-    revenue: 1885,
-    digital: 7,
-    cash: 13,
-  },
-  {
-    period: "Fri 14",
-    date: "2026-08-14",
-    orders: 6,
-    revenue: 1625,
-    digital: 1,
-    cash: 5,
-  },
-  {
-    period: "Sat 15",
-    date: "2026-08-15",
-    orders: 0,
-    revenue: 0,
-    digital: 0,
-    cash: 0,
-  },
-  {
-    period: "Sun 16",
-    date: "2026-08-16",
-    orders: 0,
-    revenue: 0,
-    digital: 0,
-    cash: 0,
-  },
-  {
-    period: "Mon 17",
-    date: "2026-08-17",
-    orders: 1,
-    revenue: 43,
-    digital: 0,
-    cash: 1,
-  },
-  {
-    period: "Tue 18",
-    date: "2026-08-18",
-    orders: 8,
-    revenue: 1707,
-    digital: 3,
-    cash: 5,
-  },
-];
-
-const BEST_SELLING = [
-  {
-    rank: 1,
-    name: "Diet Coke",
-    sold: 50,
-  },
-  {
-    rank: 2,
-    name: "Samosa",
-    sold: 41,
-  },
-  {
-    rank: 3,
-    name: "Bun Maska",
-    sold: 27,
-  },
-  {
-    rank: 4,
-    name: "Jalebi",
-    sold: 25,
-  },
-  {
-    rank: 5,
-    name: "Vada Pav",
-    sold: 19,
-  },
-];
+import { useSelector } from "react-redux";
+import { apiRequest } from "../api/client";
 
 function AnalyticsPage() {
-  const [selectedRange, setSelectedRange] =
-    useState("7days");
+  const merchant = useSelector(
+    (state) => state.merchant?.merchant
+  );
 
-  const [customFrom, setCustomFrom] =
-    useState("");
+  const merchantId = merchant?._id || merchant?.id;
 
-  const [customTo, setCustomTo] =
-    useState("");
+  const [selectedRange, setSelectedRange] = useState("7days");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [toast, setToast] = useState(null);
+ 
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const showToast = (message, type = "info") => {
+  setToast({
+    message,
+    type,
+  });
+
+  window.setTimeout(() => {
+    setToast(null);
+  }, 3000);
+};
+
+
+  /* =========================================================
+     LOAD LIVE ANALYTICS
+  ========================================================= */
+
+  const loadAnalytics = useCallback(async () => {
+    if (!merchantId) {
+      setLoading(false);
+      setError("Merchant information is not available.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await apiRequest(
+        `/analytics/${merchantId}`
+      );
+
+      const payload =
+        response?.data ??
+        response?.analytics ??
+        response;
+
+      setAnalytics(payload);
+    } catch (requestError) {
+      console.error(
+        "Analytics API error:",
+        requestError
+      );
+
+      setAnalytics(null);
+
+      setError(
+        requestError?.message ||
+          "Unable to load analytics."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [merchantId]);
+
+  /*
+   * Delayed call keeps the effect clean for the Owner app's
+   * lint rules while still loading immediately.
+   */
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadAnalytics();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [loadAnalytics]);
+
+  /* =========================================================
+     NORMALIZE API WEEKLY DATA
+  ========================================================= */
+
+  const weeklyData = useMemo(() => {
+    if (!Array.isArray(analytics?.weeklyData)) {
+      return [];
+    }
+
+    return analytics.weeklyData.map((item) => ({
+      period:
+        item?.label ||
+        item?.period ||
+        "—",
+
+      date: item?.date || "",
+
+      orders: Number(
+        item?.orders ?? 0
+      ),
+
+      revenue: Number(
+        item?.revenue ?? 0
+      ),
+
+      digital: Number(
+        item?.digital ?? 0
+      ),
+
+      cash: Number(
+        item?.cash ?? 0
+      ),
+    }));
+  }, [analytics]);
+
+  /* =========================================================
+     TODAY DATA
+  ========================================================= */
+
+  const todayData = useMemo(() => {
+    if (!weeklyData.length) {
+      return [];
+    }
+
+    return weeklyData.slice(-1);
+  }, [weeklyData]);
+
+  /* =========================================================
+     DISPLAYED DATA
+
+     API currently gives weeklyData only.
+     Therefore:
+
+     Today  -> latest returned day
+     7 days -> complete weeklyData
+     Custom -> filters the returned weeklyData
+     Month/Year -> use returned data only; no fake backend data
+  ========================================================= */
 
   const data = useMemo(() => {
     if (selectedRange === "today") {
-      return ANALYTICS_DATA.slice(-1);
-    }
-
-    if (
-      selectedRange === "7days" ||
-      selectedRange === "month" ||
-      selectedRange === "year"
-    ) {
-      return ANALYTICS_DATA;
+      return todayData;
     }
 
     if (
@@ -130,77 +170,218 @@ function AnalyticsPage() {
       customFrom &&
       customTo
     ) {
-      return ANALYTICS_DATA.filter(
+      return weeklyData.filter(
         (item) =>
           item.date >= customFrom &&
           item.date <= customTo
       );
     }
 
-    return ANALYTICS_DATA;
+    return weeklyData;
   }, [
     selectedRange,
     customFrom,
     customTo,
+    weeklyData,
+    todayData,
   ]);
 
-  const selectedRevenue = data.reduce(
-    (sum, item) =>
-      sum + item.revenue,
-    0
-  );
+  /* =========================================================
+     SELECTED REVENUE
+  ========================================================= */
 
-  const selectedOrders = data.reduce(
-    (sum, item) =>
-      sum + item.orders,
-    0
-  );
+  const selectedRevenue = useMemo(() => {
+    if (selectedRange === "today") {
+      return Number(
+        analytics?.todayRevenue ?? 0
+      );
+    }
 
-  const allTimeRevenue =
-    ANALYTICS_DATA.reduce(
+    if (selectedRange === "7days") {
+      return Number(
+        analytics?.weekRevenue ??
+          analytics?.rangeRevenue ??
+          0
+      );
+    }
+
+    return data.reduce(
       (sum, item) =>
         sum + item.revenue,
       0
     );
+  }, [
+    selectedRange,
+    analytics,
+    data,
+  ]);
 
-  const allTimeOrders =
-    ANALYTICS_DATA.reduce(
+  /* =========================================================
+     SELECTED ORDERS
+  ========================================================= */
+
+  const selectedOrders = useMemo(() => {
+    if (selectedRange === "today") {
+      return Number(
+        analytics?.todayCount ?? 0
+      );
+    }
+
+    if (selectedRange === "7days") {
+      return Number(
+        analytics?.weekOrderCount ??
+          analytics?.rangeCount ??
+          0
+      );
+    }
+
+    return data.reduce(
       (sum, item) =>
         sum + item.orders,
       0
     );
+  }, [
+    selectedRange,
+    analytics,
+    data,
+  ]);
 
-  const averageOrderValue =
-    selectedOrders > 0
-      ? Math.round(
-          selectedRevenue /
+  /* =========================================================
+     ALL TIME
+  ========================================================= */
+
+  const allTimeRevenue = Number(
+    analytics?.totalRevenue ?? 0
+  );
+
+  const allTimeOrders = Number(
+    analytics?.totalOrderCount ?? 0
+  );
+
+  /* =========================================================
+     AVERAGE ORDER VALUE
+  ========================================================= */
+
+  const averageOrderValue = useMemo(() => {
+    if (selectedRange === "today") {
+      return selectedOrders > 0
+        ? selectedRevenue /
             selectedOrders
-        )
+        : 0;
+    }
+
+    if (selectedRange === "7days") {
+      return Number(
+        analytics?.avgOrderValue ??
+          0
+      );
+    }
+
+    return selectedOrders > 0
+      ? selectedRevenue /
+          selectedOrders
       : 0;
+  }, [
+    selectedRange,
+    selectedRevenue,
+    selectedOrders,
+    analytics,
+  ]);
 
-  const digitalOrders = data.reduce(
-    (sum, item) =>
-      sum + item.digital,
-    0
-  );
+  /* =========================================================
+     PAYMENT CHANNELS
+  ========================================================= */
 
-  const cashOrders = data.reduce(
-    (sum, item) =>
-      sum + item.cash,
-    0
-  );
+  const digitalOrders = useMemo(() => {
+    if (
+      selectedRange === "today"
+    ) {
+      return todayData.reduce(
+        (sum, item) =>
+          sum + item.digital,
+        0
+      );
+    }
 
-  const digitalShare =
-    selectedOrders > 0
-      ? Math.round(
-          (digitalOrders /
-            selectedOrders) *
-            100
-        )
-      : 0;
+    /*
+     * The supplied analytics response exposes
+     * digitalOrders / cashOrders as aggregate fields.
+     *
+     * weeklyData also exposes daily digital/cash values.
+     *
+     * For the 7-day summary we use the actual daily
+     * weeklyData values so the displayed breakdown matches
+     * the chart/table dataset.
+     */
+    return data.reduce(
+      (sum, item) =>
+        sum + item.digital,
+      0
+    );
+  }, [
+    selectedRange,
+    todayData,
+    data,
+  ]);
+
+  const cashOrders = useMemo(() => {
+    if (
+      selectedRange === "today"
+    ) {
+      return todayData.reduce(
+        (sum, item) =>
+          sum + item.cash,
+        0
+      );
+    }
+
+    return data.reduce(
+      (sum, item) =>
+        sum + item.cash,
+      0
+    );
+  }, [
+    selectedRange,
+    todayData,
+    data,
+  ]);
+
+  const digitalShare = useMemo(() => {
+    if (
+      selectedRange === "7days" &&
+      analytics?.digitalPercent != null
+    ) {
+      return Number(
+        analytics.digitalPercent
+      );
+    }
+
+    if (selectedOrders <= 0) {
+      return 0;
+    }
+
+    return Math.round(
+      (digitalOrders /
+        selectedOrders) *
+        100
+    );
+  }, [
+    selectedRange,
+    analytics,
+    selectedOrders,
+    digitalOrders,
+  ]);
+
+  /* =========================================================
+     PEAK SLOT
+  ========================================================= */
 
   const busiestSlot =
-    "12:00–13:00";
+    analytics?.peakHour || "—";
+
+  /* =========================================================
+     CHART METRICS
+  ========================================================= */
 
   const maxRevenue = Math.max(
     ...data.map(
@@ -217,12 +398,51 @@ function AnalyticsPage() {
   );
 
   const peakDay =
-    data.find(
-      (item) =>
-        item.revenue === peakRevenue
-    )?.period || "—";
+    peakRevenue > 0
+      ? data.find(
+          (item) =>
+            item.revenue ===
+            peakRevenue
+        )?.period || "—"
+      : "—";
+
+  /* =========================================================
+     TOP ITEMS
+  ========================================================= */
+
+  const bestSelling = useMemo(() => {
+    if (
+      !Array.isArray(
+        analytics?.topItems
+      )
+    ) {
+      return [];
+    }
+
+    return analytics.topItems.map(
+      (item, index) => ({
+        rank: index + 1,
+
+        name:
+          item?.name ||
+          "Unknown item",
+
+        sold: Number(
+          item?.count ?? 0
+        ),
+      })
+    );
+  }, [analytics]);
+
+  /* =========================================================
+     CSV EXPORT
+  ========================================================= */
 
   const exportCSV = () => {
+    if (!data.length) {
+      return;
+    }
+
     const headers = [
       "Period",
       "Date",
@@ -258,7 +478,12 @@ function AnalyticsPage() {
         row
           .map(
             (value) =>
-              `"${value}"`
+              `"${String(
+                value
+              ).replaceAll(
+                '"',
+                '""'
+              )}"`
           )
           .join(",")
       )
@@ -297,6 +522,10 @@ function AnalyticsPage() {
 
     URL.revokeObjectURL(url);
   };
+
+  /* =========================================================
+     PRINT
+  ========================================================= */
 
   const printReport = () => {
     window.print();
@@ -342,33 +571,16 @@ function AnalyticsPage() {
 
         </div>
 
-
-        {/* Export controls */}
-
         <div className="flex items-center gap-2">
 
           <button
             type="button"
             onClick={exportCSV}
-            className="
-              flex
-              h-9
-              items-center
-              gap-1.5
-              rounded-lg
-              border
-              border-[#DCD1C6]
-              bg-white
-              px-3
-              text-[10px]
-              font-bold
-              text-[#574E46]
-              shadow-sm
-              transition
-              hover:-translate-y-0.5
-              hover:bg-[#FFFDF9]
-              hover:shadow-md
-            "
+            disabled={
+              loading ||
+              !data.length
+            }
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-[#DCD1C6] bg-white px-3 text-[10px] font-bold text-[#574E46] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFFDF9] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileSpreadsheet
               size={13}
@@ -385,27 +597,10 @@ function AnalyticsPage() {
             />
           </button>
 
-
           <button
             type="button"
             onClick={printReport}
-            className="
-              flex
-              h-9
-              items-center
-              gap-1.5
-              rounded-lg
-              bg-[#292621]
-              px-3.5
-              text-[10px]
-              font-bold
-              text-white
-              shadow-sm
-              transition
-              hover:-translate-y-0.5
-              hover:bg-[#1E1C19]
-              hover:shadow-md
-            "
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-[#292621] px-3.5 text-[10px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#1E1C19] hover:shadow-md"
           >
             <Printer size={13} />
 
@@ -420,14 +615,12 @@ function AnalyticsPage() {
 
 
       {/* =====================================================
-          CONTROL BAR
+          RANGE CONTROL
       ===================================================== */}
 
       <div className="mb-4 rounded-[13px] border border-[#DED3C7] bg-white p-2 shadow-[0_2px_8px_rgba(50,40,30,0.025)]">
 
         <div className="flex flex-wrap items-center gap-2">
-
-          {/* Range label */}
 
           <div className="mr-1 flex h-8 items-center gap-2 px-2">
 
@@ -442,7 +635,6 @@ function AnalyticsPage() {
             </span>
 
           </div>
-
 
           <FilterButton
             active={
@@ -473,53 +665,46 @@ function AnalyticsPage() {
           </FilterButton>
 
           <FilterButton
-            active={
-              selectedRange ===
-              "month"
-            }
-            onClick={() =>
-              setSelectedRange(
-                "month"
-              )
-            }
-          >
-            This month
-          </FilterButton>
+  active={selectedRange === "month"}
+  onClick={() => {
+    setSelectedRange("month");
+
+    showToast(
+      "This month analytics are currently in development. API support is not available yet.",
+      "info"
+    );
+  }}
+>
+  This month
+</FilterButton>
 
           <FilterButton
-            active={
-              selectedRange ===
-              "year"
-            }
-            onClick={() =>
-              setSelectedRange(
-                "year"
-              )
-            }
-          >
-            This year
-          </FilterButton>
+  active={selectedRange === "year"}
+  onClick={() => {
+    setSelectedRange("year");
 
-          <FilterButton
-            active={
-              selectedRange ===
-              "custom"
-            }
-            onClick={() =>
-              setSelectedRange(
-                "custom"
-              )
-            }
-          >
-            <CalendarDays
-              size={12}
-            />
+    showToast(
+      "This year analytics are currently in development. API support is not available yet.",
+      "info"
+    );
+  }}
+>
+  This year
+</FilterButton>
+<FilterButton
+  active={selectedRange === "custom"}
+  onClick={() => {
+    setSelectedRange("custom");
 
-            Custom
-          </FilterButton>
-
-
-          {/* Custom date controls */}
+    showToast(
+      "Custom analytics are currently in development. API range support is not available yet.",
+      "info"
+    );
+  }}
+>
+  <CalendarDays size={12} />
+  Custom
+</FilterButton>
 
           {selectedRange ===
             "custom" && (
@@ -534,7 +719,7 @@ function AnalyticsPage() {
                 }
               />
 
-              <span className="text-[9px] font-semibold text-[#A09488]">
+              <span className="text-[9px] font-semibold text-[#A09486]">
                 to
               </span>
 
@@ -556,7 +741,36 @@ function AnalyticsPage() {
 
 
       {/* =====================================================
-          INTELLIGENCE SUMMARY
+          API STATUS
+      ===================================================== */}
+
+      {loading && (
+        <div className="mb-4 flex items-center gap-2 rounded-[10px] border border-[#E4D8CB] bg-white px-3 py-2.5 text-[9px] font-semibold text-[#81766B]">
+          <Activity
+            size={13}
+            className="animate-pulse text-[#B87718]"
+          />
+
+          Loading live analytics...
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 flex items-start gap-2 rounded-[10px] border border-[#F0C9C5] bg-[#FFF2F0] px-3 py-2.5 text-[9px] font-semibold text-[#B84740]">
+
+          <AlertCircle
+            size={13}
+            className="mt-0.5 shrink-0"
+          />
+
+          <span>{error}</span>
+
+        </div>
+      )}
+
+
+      {/* =====================================================
+          KPI STRIP
       ===================================================== */}
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -564,27 +778,53 @@ function AnalyticsPage() {
         <AnalyticsMetric
           icon={CircleDollarSign}
           label="Selected revenue"
-          value={`₹${selectedRevenue.toLocaleString(
-            "en-IN"
-          )}`}
-          sub={`${selectedOrders} orders`}
+          value={
+            loading
+              ? "—"
+              : `₹${selectedRevenue.toLocaleString(
+                  "en-IN"
+                )}`
+          }
+          sub={
+            loading
+              ? "Loading..."
+              : `${selectedOrders} orders`
+          }
           accent="amber"
         />
 
         <AnalyticsMetric
           icon={ShoppingBag}
           label="All-time orders"
-          value={allTimeOrders}
-          sub={`₹${allTimeRevenue.toLocaleString(
-            "en-IN"
-          )} sales`}
+          value={
+            loading
+              ? "—"
+              : allTimeOrders.toLocaleString(
+                  "en-IN"
+                )
+          }
+          sub={
+            loading
+              ? "Loading..."
+              : `₹${allTimeRevenue.toLocaleString(
+                  "en-IN"
+                )} sales`
+          }
           accent="green"
         />
 
         <AnalyticsMetric
           icon={ReceiptText}
           label="Average order"
-          value={`₹${averageOrderValue}`}
+          value={
+            loading
+              ? "—"
+              : `₹${Math.round(
+                  averageOrderValue
+                ).toLocaleString(
+                  "en-IN"
+                )}`
+          }
           sub="Per checkout"
           accent="neutral"
         />
@@ -592,15 +832,27 @@ function AnalyticsPage() {
         <AnalyticsMetric
           icon={WalletCards}
           label="Digital share"
-          value={`${digitalShare}%`}
-          sub={`UPI ${digitalOrders} · Cash ${cashOrders}`}
+          value={
+            loading
+              ? "—"
+              : `${digitalShare}%`
+          }
+          sub={
+            loading
+              ? "Loading..."
+              : `UPI ${digitalOrders} · Cash ${cashOrders}`
+          }
           accent="green"
         />
 
         <AnalyticsMetric
           icon={Clock3}
           label="Peak slot"
-          value={busiestSlot}
+          value={
+            loading
+              ? "—"
+              : busiestSlot
+          }
           sub="Highest order volume"
           accent="amber"
           compact
@@ -610,18 +862,14 @@ function AnalyticsPage() {
 
 
       {/* =====================================================
-          PRIMARY ANALYTICS AREA
+          CHART + BEST SELLERS
       ===================================================== */}
 
       <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_300px]">
 
-        {/* ===================================================
-            REVENUE COMMAND CHART
-        =================================================== */}
+        {/* REVENUE */}
 
         <section className="overflow-hidden rounded-[16px] border border-[#DED3C7] bg-white shadow-[0_4px_16px_rgba(54,43,30,0.035)]">
-
-          {/* Chart header */}
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEE6DC] px-4 py-3.5">
 
@@ -646,7 +894,6 @@ function AnalyticsPage() {
               </p>
 
             </div>
-
 
             <div className="flex items-center gap-2">
 
@@ -680,9 +927,6 @@ function AnalyticsPage() {
 
           </div>
 
-
-          {/* Chart body */}
-
           <div className="px-4 pb-4 pt-5">
 
             <RevenueChart
@@ -693,9 +937,6 @@ function AnalyticsPage() {
             />
 
           </div>
-
-
-          {/* Chart footer */}
 
           <div className="grid grid-cols-3 border-t border-[#EEE6DC] bg-[#FCFAF7]">
 
@@ -729,9 +970,7 @@ function AnalyticsPage() {
         </section>
 
 
-        {/* ===================================================
-            BEST SELLING PANEL
-        =================================================== */}
+        {/* BEST SELLERS */}
 
         <section className="overflow-hidden rounded-[16px] bg-[#292621] text-white shadow-[0_10px_28px_rgba(31,27,22,0.13)]">
 
@@ -770,21 +1009,29 @@ function AnalyticsPage() {
 
           </div>
 
-
           <div className="p-2.5">
 
-            {BEST_SELLING.map(
-              (item, index) => (
-                <BestSellerRow
-                  key={item.name}
-                  item={item}
-                  index={index}
-                />
+            {bestSelling.length ? (
+              bestSelling.map(
+                (item, index) => (
+                  <BestSellerRow
+                    key={`${item.name}-${index}`}
+                    item={item}
+                    index={index}
+                    maxSold={
+                      bestSelling[0]?.sold ||
+                      1
+                    }
+                  />
+                )
               )
+            ) : (
+              <div className="px-2.5 py-8 text-center text-[9px] text-[#948B83]">
+                No best-selling items available.
+              </div>
             )}
 
           </div>
-
 
           <div className="border-t border-white/[0.08] px-4 py-3">
 
@@ -795,7 +1042,7 @@ function AnalyticsPage() {
               </span>
 
               <span className="text-[10px] font-bold text-[#F0B348]">
-                {BEST_SELLING[0]?.name ||
+                {bestSelling[0]?.name ||
                   "—"}
               </span>
 
@@ -809,7 +1056,7 @@ function AnalyticsPage() {
 
 
       {/* =====================================================
-          OPERATIONAL INSIGHT STRIP
+          INSIGHTS
       ===================================================== */}
 
       <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -839,8 +1086,10 @@ function AnalyticsPage() {
         <InsightCard
           icon={Clock3}
           title="Peak operation"
-          value={busiestSlot}
-          text="Highest order volume slot currently configured for the analytics view."
+          value={
+            busiestSlot
+          }
+          text="Highest order volume slot currently returned by the analytics API."
           tone="neutral"
         />
 
@@ -848,7 +1097,7 @@ function AnalyticsPage() {
 
 
       {/* =====================================================
-          AUDIT SECTION
+          AUDIT TABLE
       ===================================================== */}
 
       <section className="overflow-hidden rounded-[16px] border border-[#DED3C7] bg-white shadow-[0_4px_16px_rgba(54,43,30,0.035)]">
@@ -877,7 +1126,6 @@ function AnalyticsPage() {
 
           </div>
 
-
           <div className="flex items-center gap-1.5 rounded-full border border-[#E6DDD3] bg-[#FCFAF7] px-2.5 py-1">
 
             <span className="h-1.5 w-1.5 rounded-full bg-[#39A88B]" />
@@ -889,7 +1137,6 @@ function AnalyticsPage() {
           </div>
 
         </div>
-
 
         <div className="overflow-x-auto">
 
@@ -931,15 +1178,12 @@ function AnalyticsPage() {
 
             </thead>
 
-
             <tbody>
 
               {data.map(
                 (item) => {
-
                   const aov =
-                    item.orders >
-                    0
+                    item.orders > 0
                       ? Math.round(
                           item.revenue /
                             item.orders
@@ -949,8 +1193,7 @@ function AnalyticsPage() {
                   const isPeak =
                     item.revenue ===
                       peakRevenue &&
-                    peakRevenue >
-                      0;
+                    peakRevenue > 0;
 
                   return (
                     <tr
@@ -976,7 +1219,6 @@ function AnalyticsPage() {
 
                       </td>
 
-
                       <td className="px-4 py-3.5">
 
                         <span className="text-[10px] font-medium text-[#877C71]">
@@ -985,7 +1227,6 @@ function AnalyticsPage() {
 
                       </td>
 
-
                       <td className="px-4 py-3.5 text-right">
 
                         <span className="text-[11px] font-bold text-[#3D3730]">
@@ -993,7 +1234,6 @@ function AnalyticsPage() {
                         </span>
 
                       </td>
-
 
                       <td className="px-4 py-3.5 text-right">
 
@@ -1005,7 +1245,6 @@ function AnalyticsPage() {
 
                       </td>
 
-
                       <td className="px-4 py-3.5 text-right">
 
                         <span className="text-[10px] font-semibold text-[#5E554D]">
@@ -1014,7 +1253,6 @@ function AnalyticsPage() {
 
                       </td>
 
-
                       <td className="px-4 py-3.5 text-right">
 
                         <span className="inline-flex min-w-[28px] justify-center rounded-md bg-[#E8F5F0] px-1.5 py-1 text-[9px] font-bold text-[#267A65]">
@@ -1022,7 +1260,6 @@ function AnalyticsPage() {
                         </span>
 
                       </td>
-
 
                       <td className="px-4 py-3.5 text-right">
 
@@ -1037,14 +1274,25 @@ function AnalyticsPage() {
                 }
               )}
 
+              {!loading &&
+                data.length === 0 && (
+                  <tr>
+
+                    <td
+                      colSpan={7}
+                      className="px-4 py-12 text-center text-[10px] text-[#94897E]"
+                    >
+                      No analytics data available.
+                    </td>
+
+                  </tr>
+                )}
+
             </tbody>
 
           </table>
 
         </div>
-
-
-        {/* Table footer */}
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#EEE6DC] bg-[#FCFAF7] px-4 py-2.5">
 
@@ -1071,6 +1319,41 @@ function AnalyticsPage() {
         </div>
 
       </section>
+  {/* TOAST */}
+
+      {toast && (
+        <div
+          className={`fixed bottom-5 right-5 z-[9999] flex max-w-[360px] items-center gap-2.5 rounded-[11px] border px-3.5 py-3 shadow-[0_10px_30px_rgba(41,38,33,0.15)] backdrop-blur-sm transition-all ${
+            toast.type === "success"
+              ? "border-[#BFE3D7] bg-[#F0FAF6] text-[#267A65]"
+              : toast.type === "error"
+                ? "border-[#F0C9C5] bg-[#FFF2F0] text-[#B84740]"
+                : "border-[#E5D5BC] bg-[#FFF9EF] text-[#A96D18]"
+          }`}
+        >
+          <div
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+              toast.type === "success"
+                ? "bg-[#DDF2EB]"
+                : toast.type === "error"
+                  ? "bg-[#F9DEDA]"
+                  : "bg-[#F5E8D3]"
+            }`}
+          >
+            {toast.type === "success" ? (
+              <CircleDollarSign size={13} />
+            ) : toast.type === "error" ? (
+              <AlertCircle size={13} />
+            ) : (
+              <Activity size={13} />
+            )}
+          </div>
+
+          <p className="text-[9px] font-bold leading-4">
+            {toast.message}
+          </p>
+        </div>
+      )}
 
     </div>
   );
@@ -1085,10 +1368,16 @@ function RevenueChart({
   data,
   maxRevenue,
 }) {
+  if (!data.length) {
+    return (
+      <div className="flex h-[220px] items-center justify-center text-[10px] text-[#94897E]">
+        No revenue data available.
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
-
-      {/* Grid */}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-[28px] top-0 flex flex-col justify-between">
 
@@ -1103,12 +1392,10 @@ function RevenueChart({
 
       </div>
 
-
       <div className="relative flex h-[220px] items-end gap-2 sm:gap-3">
 
         {data.map(
           (item, index) => {
-
             const percentage =
               item.revenue === 0
                 ? 1
@@ -1134,8 +1421,6 @@ function RevenueChart({
                 className="group flex h-full flex-1 flex-col items-center justify-end"
               >
 
-                {/* Value */}
-
                 <div className="mb-1.5 h-5">
 
                   {item.revenue >
@@ -1156,9 +1441,6 @@ function RevenueChart({
 
                 </div>
 
-
-                {/* Bar */}
-
                 <div className="relative flex h-[175px] w-full max-w-[64px] items-end">
 
                   {isPeak && (
@@ -1166,19 +1448,11 @@ function RevenueChart({
                   )}
 
                   <div
-                    className={`
-                      relative
-                      w-full
-                      rounded-t-[8px]
-                      transition-all
-                      duration-300
-                      group-hover:brightness-105
-                      ${
-                        isLast
-                          ? "bg-[#247A68]"
-                          : "bg-[#D8942E]"
-                      }
-                    `}
+                    className={`relative w-full rounded-t-[8px] transition-all duration-300 group-hover:brightness-105 ${
+                      isLast
+                        ? "bg-[#247A68]"
+                        : "bg-[#D8942E]"
+                    }`}
                     style={{
                       height: `${percentage}%`,
                       minHeight:
@@ -1194,9 +1468,6 @@ function RevenueChart({
                   </div>
 
                 </div>
-
-
-                {/* Label */}
 
                 <div className="mt-2.5 flex flex-col items-center">
 
@@ -1239,8 +1510,10 @@ function AnalyticsMetric({
   const iconStyles = {
     amber:
       "bg-[#F5E8D3] text-[#C57B18]",
+
     green:
       "bg-[#E5F3EE] text-[#25836D]",
+
     neutral:
       "bg-[#F0EAE3] text-[#6C6258]",
   };
@@ -1339,51 +1612,30 @@ function ChartFooterStat({
 function BestSellerRow({
   item,
   index,
+  maxSold = 1,
 }) {
   const top = index === 0;
 
   return (
     <div
-      className={`
-        group
-        flex
-        items-center
-        gap-2.5
-        rounded-[10px]
-        px-2.5
-        py-2.5
-        transition
-        ${
-          top
-            ? "bg-white/[0.07]"
-            : "hover:bg-white/[0.045]"
-        }
-      `}
+      className={`group flex items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 transition ${
+        top
+          ? "bg-white/[0.07]"
+          : "hover:bg-white/[0.045]"
+      }`}
     >
 
       <div
-        className={`
-          flex
-          h-7
-          w-7
-          shrink-0
-          items-center
-          justify-center
-          rounded-lg
-          text-[9px]
-          font-bold
-          ${
-            top
-              ? "bg-[#E6A23C] text-[#332511]"
-              : "bg-white/[0.07] text-[#AFA69D]"
-          }
-        `}
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold ${
+          top
+            ? "bg-[#E6A23C] text-[#332511]"
+            : "bg-white/[0.07] text-[#AFA69D]"
+        }`}
       >
         {String(
           item.rank
         ).padStart(2, "0")}
       </div>
-
 
       <div className="min-w-0 flex-1">
 
@@ -1394,17 +1646,23 @@ function BestSellerRow({
         <div className="mt-1 h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
 
           <div
-            className={`h-full rounded-full ${
-              top
-                ? "bg-[#E6A23C]"
-                : "bg-[#80776F]"
-            }`}
+            className={
+              `h-full rounded-full ${
+                top
+                  ? "bg-[#E6A23C]"
+                  : "bg-[#80776F]"
+              }`
+            }
             style={{
               width: `${
-                (item.sold /
-                  BEST_SELLING[0]
-                    .sold) *
-                100
+                maxSold > 0
+                  ? Math.min(
+                      100,
+                      (item.sold /
+                        maxSold) *
+                        100
+                    )
+                  : 0
               }%`,
             }}
           />
@@ -1412,7 +1670,6 @@ function BestSellerRow({
         </div>
 
       </div>
-
 
       <div className="shrink-0 text-right">
 
@@ -1444,16 +1701,24 @@ function InsightCard({
 }) {
   const styles = {
     amber: {
-      icon: "bg-[#F5E8D3] text-[#C57B18]",
-      value: "text-[#B97012]",
+      icon:
+        "bg-[#F5E8D3] text-[#C57B18]",
+      value:
+        "text-[#B97012]",
     },
+
     green: {
-      icon: "bg-[#E5F3EE] text-[#25836D]",
-      value: "text-[#267A65]",
+      icon:
+        "bg-[#E5F3EE] text-[#25836D]",
+      value:
+        "text-[#267A65]",
     },
+
     neutral: {
-      icon: "bg-[#F0EAE3] text-[#6C6258]",
-      value: "text-[#4B443D]",
+      icon:
+        "bg-[#F0EAE3] text-[#6C6258]",
+      value:
+        "text-[#4B443D]",
     },
   };
 
@@ -1504,24 +1769,11 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
-      className={`
-        flex
-        h-8
-        items-center
-        gap-1.5
-        rounded-lg
-        border
-        px-3
-        text-[9px]
-        font-bold
-        transition-all
-        active:scale-[0.98]
-        ${
-          active
-            ? "border-[#292621] bg-[#292621] text-white shadow-sm"
-            : "border-transparent bg-[#F7F3ED] text-[#655C54] hover:border-[#E0D5C9] hover:bg-white"
-        }
-      `}
+      className={`flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[9px] font-bold transition-all active:scale-[0.98] ${
+        active
+          ? "border-[#292621] bg-[#292621] text-white shadow-sm"
+          : "border-transparent bg-[#F7F3ED] text-[#655C54] hover:border-[#E0D5C9] hover:bg-white"
+      }`}
     >
       {children}
     </button>
@@ -1553,26 +1805,11 @@ function DateInput({
             event.target.value
           )
         }
-        className="
-          h-8
-          rounded-lg
-          border
-          border-[#DDD2C6]
-          bg-white
-          pl-7
-          pr-2
-          text-[9px]
-          font-semibold
-          text-[#554C44]
-          outline-none
-          transition
-          focus:border-[#D49A48]
-          focus:ring-[3px]
-          focus:ring-[#D49A48]/10
-        "
+        className="h-8 rounded-lg border border-[#DDD2C6] bg-white pl-7 pr-2 text-[9px] font-semibold text-[#554C44] outline-none transition focus:border-[#D49A48] focus:ring-[3px] focus:ring-[#D49A48]/10"
       />
 
     </div>
+    
   );
 }
 
@@ -1597,6 +1834,5 @@ function AuditHeader({
     </th>
   );
 }
-
 
 export default AnalyticsPage;
