@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSelector } from "react-redux";
+import { apiRequest } from "../api/client";
+
 import {
   Plus,
   Grid2X2,
@@ -15,131 +18,573 @@ import {
   Utensils,
   Banknote,
   LayoutGrid,
+  RefreshCw,
+  LoaderCircle,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 
-const initialTables = [
-  {
-    id: 1,
-    name: "Table 1",
+/* ============================================================
+   LEGACY DISPLAY META
+   ------------------------------------------------------------
+   The current table API does not return seats/section.
+   We preserve your existing UI values where they already exist.
+   Backend occupancy/order data remains authoritative.
+============================================================ */
+
+const legacyTableMeta = {
+  1: {
     seats: 4,
     section: "Indoor Main",
-    status: "Available",
   },
-  {
-    id: 2,
-    name: "Table 2",
+  2: {
     seats: 2,
     section: "Indoor Main",
-    status: "Available",
   },
-  {
-    id: 3,
-    name: "Table 3",
+  3: {
     seats: 4,
     section: "Indoor Main",
-    status: "Cash Pending",
-    token: "#A-001",
-    bill: 43,
-    duration: "34 mins",
-    items: [
-      { name: "Vada Pav", quantity: 1 },
-      { name: "Bun Maska", quantity: 1 },
-      { name: "Filter Coffee", quantity: 1 },
-    ],
   },
-  {
-    id: 4,
-    name: "Table 4",
+  4: {
     seats: 2,
     section: "Indoor Main",
-    status: "Available",
   },
-  {
-    id: 5,
-    name: "Table 5",
+  5: {
     seats: 4,
     section: "Indoor Main",
-    status: "Available",
   },
-  {
-    id: 6,
-    name: "Table 6",
+  6: {
     seats: 2,
     section: "Indoor Main",
-    status: "Available",
   },
-  {
-    id: 7,
-    name: "Table 7",
+  7: {
     seats: 4,
     section: "Outdoor Terrace",
-    status: "Available",
   },
-  {
-    id: 8,
-    name: "Table 8",
+  8: {
     seats: 2,
     section: "Outdoor Terrace",
-    status: "Available",
   },
-  {
-    id: 9,
-    name: "Table 9",
+  9: {
     seats: 4,
     section: "Outdoor Terrace",
-    status: "Available",
   },
-  {
-    id: 10,
-    name: "Table 10",
+  10: {
     seats: 2,
     section: "Outdoor Terrace",
-    status: "Available",
   },
-];
+};
+
+/*
+ * IMPORTANT:
+ * The GET response you supplied confirms the table/session API.
+ *
+ * The close URL is:
+ * /orders/tables/close/:merchantId/:tableId
+ *
+ * If your mentor's curl specifies PUT instead of POST,
+ * change only this constant.
+ */
+const CLOSE_TABLE_METHOD = "POST";
+
+/* ============================================================
+   HELPERS
+============================================================ */
+
+function getErrorMessage(error, fallback) {
+  return (
+    error?.message ||
+    error?.response?.message ||
+    error?.data?.message ||
+    fallback
+  );
+}
+
+function formatINR(value) {
+  return `₹${Number(value || 0).toLocaleString("en-IN")}`;
+}
+
+function calculateDuration(startedAt) {
+  if (!startedAt) return "";
+
+  const start = new Date(startedAt);
+
+  if (Number.isNaN(start.getTime())) {
+    return "";
+  }
+
+  const diffMs = Math.max(0, Date.now() - start.getTime());
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) {
+    return "Just now";
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} mins`;
+  }
+
+  const hours = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+
+  return minutes
+    ? `${hours}h ${minutes}m`
+    : `${hours}h`;
+}
+
+/* ============================================================
+   NORMALIZE LIVE API RESPONSE
+============================================================ */
+
+function normalizeTables(response) {
+  let rawTables = [];
+
+  if (Array.isArray(response)) {
+    rawTables = response;
+  } else if (Array.isArray(response?.tables)) {
+    rawTables = response.tables;
+  } else if (Array.isArray(response?.data)) {
+    rawTables = response.data;
+  } else if (Array.isArray(response?.data?.tables)) {
+    rawTables = response.data.tables;
+  }
+
+  return rawTables
+    .map((table, index) => {
+      const numericId = Number(table?.tableId);
+
+      const fallbackMeta =
+        legacyTableMeta[numericId] || {};
+
+      const orders = Array.isArray(table?.orders)
+        ? table.orders
+        : [];
+
+      const firstOrder = orders[0] || null;
+
+      /*
+       * Keep the existing Floor Board data shape so the
+       * existing JSX/design does not need to be rebuilt.
+       */
+      return {
+        id: Number.isFinite(numericId)
+          ? numericId
+          : index + 1,
+
+        name:
+          table?.tableName ||
+          `Table ${numericId || index + 1}`,
+
+        seats:
+          table?.seats ??
+          fallbackMeta.seats ??
+          4,
+
+        section:
+          table?.section ||
+          fallbackMeta.section ||
+          "Indoor Main",
+
+        /* BACKEND SOURCE OF TRUTH */
+        isOccupied: Boolean(table?.isOccupied),
+
+        /*
+         * Keep status because your existing design uses it.
+         * It is DERIVED from backend fields.
+         */
+        status: !table?.isOccupied
+          ? "Available"
+          : table?.hasCashPending
+          ? "Cash Pending"
+          : "Occupied",
+
+        ordersCount: Number(
+          table?.ordersCount || 0
+        ),
+
+        totalBill: Number(
+          table?.totalBill || 0
+        ),
+
+        hasCashPending: Boolean(
+          table?.hasCashPending
+        ),
+
+        orders,
+
+        sessionStartedAt:
+          table?.sessionStartedAt || null,
+
+        /*
+         * Existing card expects these fields.
+         */
+        token:
+          firstOrder?.tokenNumber ||
+          undefined,
+
+        bill:
+          Number(table?.totalBill || 0) ||
+          undefined,
+
+        duration:
+          calculateDuration(
+            table?.sessionStartedAt
+          ) || undefined,
+
+        /*
+         * Flatten all current-session order items.
+         * Table 3, for example, has TWO orders in the
+         * supplied response.
+         */
+        items: orders.flatMap(
+          (order) =>
+            Array.isArray(order?.items)
+              ? order.items
+              : []
+        ),
+      };
+    })
+    .sort((a, b) => a.id - b.id);
+}
+
+/* ============================================================
+   TOAST
+============================================================ */
+
+function Toast({
+  toast,
+  onClose,
+}) {
+  if (!toast.open) {
+    return null;
+  }
+
+  return (
+    <div className="fixed bottom-5 right-5 z-[9999] w-[min(360px,calc(100vw-2rem))]">
+      <div
+        className={`flex items-start gap-3 rounded-[12px] border px-3.5 py-3 shadow-[0_12px_32px_rgba(41,37,31,0.18)] ${
+          toast.type === "error"
+            ? "border-[#E7C5C0] bg-[#FFF8F7] text-[#8E3D34]"
+            : "border-[#C9E2D8] bg-[#F5FCF9] text-[#287A66]"
+        }`}
+      >
+        <div
+          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+            toast.type === "error"
+              ? "bg-[#F6E1DE]"
+              : "bg-[#DDF1E9]"
+          }`}
+        >
+          {toast.type === "error" ? (
+            <AlertCircle size={15} />
+          ) : (
+            <CheckCircle2 size={15} />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-bold">
+            {toast.type === "error"
+              ? "Action failed"
+              : "Success"}
+          </p>
+
+          <p className="mt-0.5 text-[10px] leading-4 opacity-80">
+            {toast.message}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md p-1 opacity-50 hover:bg-black/5 hover:opacity-100"
+        >
+          <X size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   PAGE
+============================================================ */
 
 function TableSessionsPage() {
-  const [tables, setTables] =
-    useState(initialTables);
+  const merchant = useSelector(
+    (state) => state.merchant?.merchant
+  );
 
-  const [view, setView] = useState("grid");
-  const [section, setSection] = useState("All");
-  const [status, setStatus] = useState("All Tables");
+  const merchantId =
+    merchant?._id ||
+    merchant?.id ||
+    "";
 
-  const [modal, setModal] = useState(null);
+  const [tables, setTables] = useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [view, setView] =
+    useState("grid");
+
+  const [section, setSection] =
+    useState("All");
+
+  const [status, setStatus] =
+    useState("All Tables");
+
+  const [modal, setModal] =
+    useState(null);
+
   const [selectedTable, setSelectedTable] =
     useState(null);
 
-  const [newTable, setNewTable] = useState({
-    name: "",
-    seats: "4",
-    section: "Indoor Main",
-  });
+  const [newTable, setNewTable] =
+    useState({
+      name: "",
+      seats: "4",
+      section: "Indoor Main",
+    });
 
-  const filteredTables = tables.filter((table) => {
-    const sectionMatch =
-      section === "All" ||
-      table.section === section;
+  const [closingTableId, setClosingTableId] =
+    useState(null);
 
-    const statusMatch =
-      status === "All Tables" ||
-      table.status === status;
+  const [toast, setToast] =
+    useState({
+      open: false,
+      type: "success",
+      message: "",
+    });
 
-    return sectionMatch && statusMatch;
-  });
+  const toastTimerRef =
+    useRef(null);
 
-  const occupiedCount = tables.filter(
-    (table) => table.status !== "Available"
-  ).length;
+  /* ==========================================================
+     TOAST
+  ========================================================== */
 
-  const availableCount = tables.filter(
-    (table) => table.status === "Available"
-  ).length;
+  const showToast = useCallback(
+    (
+      message,
+      type = "success"
+    ) => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(
+          toastTimerRef.current
+        );
+      }
 
-  const totalSeats = tables.reduce(
-    (sum, table) => sum + table.seats,
-    0
+      setToast({
+        open: true,
+        type,
+        message,
+      });
+
+      toastTimerRef.current =
+        window.setTimeout(() => {
+          setToast({
+            open: false,
+            type: "success",
+            message: "",
+          });
+        }, 3000);
+    },
+    []
   );
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(
+          toastTimerRef.current
+        );
+      }
+    };
+  }, []);
+
+  /* ==========================================================
+     LOAD LIVE TABLES
+  ========================================================== */
+
+  const loadTables = useCallback(
+    async ({
+      silent = false,
+    } = {}) => {
+      if (!merchantId) {
+        setTables([]);
+        setLoading(false);
+        setError(
+          "Merchant information is not available."
+        );
+        return;
+      }
+
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      setError("");
+
+      try {
+        const response =
+          await apiRequest(
+            `/orders/tables/${merchantId}`,
+            {
+              method: "GET",
+            }
+          );
+
+        const normalizedTables =
+          normalizeTables(response);
+
+        setTables(normalizedTables);
+      } catch (requestError) {
+        console.error(
+          "Failed to load table sessions:",
+          requestError
+        );
+
+        setError(
+          getErrorMessage(
+            requestError,
+            "Unable to load table sessions."
+          )
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [merchantId]
+  );
+
+  /* ==========================================================
+     INITIAL LOAD
+  ========================================================== */
+
+  useEffect(() => {
+    const timer =
+      window.setTimeout(() => {
+        loadTables();
+      }, 0);
+
+    return () =>
+      window.clearTimeout(timer);
+  }, [loadTables]);
+
+  /* ==========================================================
+     DYNAMIC SECTION LIST
+     ----------------------------------------------------------
+     Your existing design only had these two sections.
+     We preserve those tabs, but only show a section if
+     relevant metadata exists.
+  ========================================================== */
+
+  const sectionTabs = useMemo(() => {
+    const knownSections = [
+      "Indoor Main",
+      "Outdoor Terrace",
+    ];
+
+    const availableSections =
+      knownSections.filter((sectionName) =>
+        tables.some(
+          (table) =>
+            table.section === sectionName
+        )
+      );
+
+    return [
+      {
+        label: "All",
+        count: tables.length,
+      },
+      ...availableSections.map(
+        (sectionName) => ({
+          label: sectionName,
+          count: tables.filter(
+            (table) =>
+              table.section ===
+              sectionName
+          ).length,
+        })
+      ),
+    ];
+  }, [tables]);
+
+  /* ==========================================================
+     FILTER
+  ========================================================== */
+
+  const filteredTables =
+    tables.filter((table) => {
+      const sectionMatch =
+        section === "All" ||
+        table.section === section;
+
+      const statusMatch =
+        status === "All Tables" ||
+        (status === "Available" &&
+          !table.isOccupied) ||
+        (status === "Occupied" &&
+          table.isOccupied) ||
+        (status === "Cash Pending" &&
+          table.hasCashPending);
+
+      return (
+        sectionMatch &&
+        statusMatch
+      );
+    });
+
+  /* ==========================================================
+     LIVE KPIs
+  ========================================================== */
+
+  const occupiedCount =
+    tables.filter(
+      (table) => table.isOccupied
+    ).length;
+
+  const availableCount =
+    tables.filter(
+      (table) => !table.isOccupied
+    ).length;
+
+  const totalSeats =
+    tables.reduce(
+      (sum, table) =>
+        sum + Number(table.seats || 0),
+      0
+    );
+
+  const cashPendingTotal =
+    tables
+      .filter(
+        (table) =>
+          table.hasCashPending
+      )
+      .reduce(
+        (sum, table) =>
+          sum +
+          Number(
+            table.totalBill || 0
+          ),
+        0
+      );
+
+  /* ==========================================================
+     MODALS
+  ========================================================== */
 
   const openModal = (
     type,
@@ -154,28 +599,98 @@ function TableSessionsPage() {
     setSelectedTable(null);
   };
 
-  const createTable = () => {
-    if (!newTable.name.trim()) return;
+  /* ==========================================================
+     CLOSE TABLE
+     ----------------------------------------------------------
+     This is the important new live operation.
+  ========================================================== */
 
-    const nextId =
-      tables.length > 0
-        ? Math.max(
-            ...tables.map(
-              (table) => table.id
-            )
-          ) + 1
-        : 1;
+  const closeAndVacate =
+    async (table) => {
+      if (!table || !merchantId) {
+        return;
+      }
 
-    setTables((current) => [
-      ...current,
-      {
-        id: nextId,
-        name: newTable.name.trim(),
-        seats: Number(newTable.seats),
-        section: newTable.section,
-        status: "Available",
+      if (!table.isOccupied) {
+        closeModal();
+        return;
+      }
+
+      setClosingTableId(
+        table.id
+      );
+
+      try {
+        await apiRequest(
+          `/orders/tables/close/${merchantId}/${table.id}`,
+          {
+            method:
+              CLOSE_TABLE_METHOD,
+          }
+        );
+
+        showToast(
+          `${table.name} closed successfully.`
+        );
+
+        closeModal();
+
+        /*
+         * IMPORTANT:
+         * Do not locally set isOccupied=false.
+         *
+         * Re-fetch the backend response and let
+         * the backend decide the final table state.
+         */
+        await loadTables({
+          silent: true,
+        });
+      } catch (requestError) {
+        console.error(
+          "Failed to close table:",
+          requestError
+        );
+
+        showToast(
+          getErrorMessage(
+            requestError,
+            `Unable to close ${table.name}.`
+          ),
+          "error"
+        );
+      } finally {
+        setClosingTableId(null);
+      }
+    };
+
+  /* ==========================================================
+     CREATE TABLE
+     ----------------------------------------------------------
+     No table-create endpoint has been provided.
+     Therefore do NOT fake persistence.
+  ========================================================== */
+
+const createTable = async () => {
+  if (!merchantId) {
+    showToast(
+      "Merchant information is not available.",
+      "error"
+    );
+    return;
+  }
+
+  try {
+    await apiRequest("/orders/tables", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    ]);
+      body: JSON.stringify({
+        merchantId,
+      }),
+    });
+
+    showToast("Table created successfully.");
 
     setNewTable({
       name: "",
@@ -184,63 +699,187 @@ function TableSessionsPage() {
     });
 
     closeModal();
-  };
 
-  const deleteTable = (tableId) => {
-    const table = tables.find(
-      (item) => item.id === tableId
+    await loadTables({
+      silent: true,
+    });
+  } catch (requestError) {
+    console.error(
+      "Failed to create table:",
+      requestError
     );
 
-    if (!table) return;
+    showToast(
+      getErrorMessage(
+        requestError,
+        "Unable to create table."
+      ),
+      "error"
+    );
+  }
+};
+  /* ==========================================================
+     DELETE TABLE
+     ----------------------------------------------------------
+     No table-delete endpoint has been provided.
+  ========================================================== */
 
-    if (table.status !== "Available") {
-      alert(
-        "Occupied table cannot be deleted."
-      );
-      return;
-    }
+const deleteTable = async (tableId) => {
+  const table = tables.find(
+    (item) => item.id === tableId
+  );
 
-    if (
-      window.confirm(
-        `Delete ${table.name}? This action cannot be undone.`
-      )
-    ) {
-      setTables((current) =>
-        current.filter(
-          (item) => item.id !== tableId
-        )
-      );
-    }
-  };
+  if (!table) {
+    return;
+  }
 
-  const closeAndVacate = (table) => {
-    if (!table) return;
+  if (table.isOccupied) {
+    showToast(
+      "Occupied table cannot be deleted.",
+      "error"
+    );
+    return;
+  }
 
-    setTables((current) =>
-      current.map((item) =>
-        item.id === table.id
-          ? {
-              ...item,
-              status: "Available",
-              token: undefined,
-              bill: undefined,
-              duration: undefined,
-              items: undefined,
-            }
-          : item
-      )
+  if (!merchantId) {
+    showToast(
+      "Merchant information is not available.",
+      "error"
+    );
+    return;
+  }
+
+  try {
+    await apiRequest("/orders/tables", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        merchantId,
+        tableId,
+      }),
+    });
+
+    showToast(
+      `${table.name} deleted successfully.`
+    );
+
+    await loadTables({
+      silent: true,
+    });
+  } catch (requestError) {
+    console.error(
+      "Failed to delete table:",
+      requestError
+    );
+
+    showToast(
+      getErrorMessage(
+        requestError,
+        `Unable to delete ${table.name}.`
+      ),
+      "error"
+    );
+  }
+};
+  /* ==========================================================
+     EDIT TABLE
+     ----------------------------------------------------------
+     No table-update endpoint has been provided.
+  ========================================================== */
+
+const saveEditedTable = async (updatedData) => {
+  if (!merchantId || !selectedTable) {
+    showToast(
+      "Table information is not available.",
+      "error"
+    );
+    return;
+  }
+
+  try {
+    await apiRequest("/orders/tables", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        merchantId,
+        tableId: selectedTable.id,
+        name: updatedData.name,
+        seats: Number(updatedData.seats),
+        section: updatedData.section,
+      }),
+    });
+
+    showToast(
+      `${selectedTable.name} updated successfully.`
     );
 
     closeModal();
+
+    await loadTables({
+      silent: true,
+    });
+  } catch (requestError) {
+    console.error(
+      "Failed to update table:",
+      requestError
+    );
+
+    showToast(
+      getErrorMessage(
+        requestError,
+        "Unable to update table."
+      ),
+      "error"
+    );
+  }
+};
+
+  /* ==========================================================
+     QR
+  ========================================================== */
+
+  const getQrUrl = (
+    table
+  ) => {
+    const url =
+      `https://qrcode-bytsol.vercel.app/demo?table=${table.id}`;
+
+    return (
+      `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=` +
+      encodeURIComponent(url)
+    );
   };
 
-  const getQrUrl = (table) => {
-    const url = `https://qrcode-bytsol.vercel.app/demo?table=${table.id}`;
+  /* ==========================================================
+     LOADING
+  ========================================================== */
 
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-      url
-    )}`;
-  };
+  if (loading) {
+    return (
+      <section className="min-h-screen bg-[#F5F1EA] px-4 py-4 lg:px-6">
+        <div className="flex min-h-[400px] items-center justify-center rounded-[18px] border border-[#DED3C5] bg-[#FFFDF9]">
+          <div className="text-center">
+            <LoaderCircle
+              size={26}
+              className="mx-auto animate-spin text-[#D48A20]"
+            />
+
+            <p className="mt-3 text-[12px] font-bold text-[#51483B]">
+              Loading table sessions...
+            </p>
+
+            <p className="mt-1 text-[10px] text-[#9C9082]">
+              Fetching live table occupancy.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="min-h-screen bg-[#F5F1EA] px-4 py-4 lg:px-6">
@@ -286,6 +925,27 @@ function TableSessionsPage() {
             <button
               type="button"
               onClick={() =>
+                loadTables({
+                  silent: true,
+                })
+              }
+              disabled={refreshing}
+              className="flex items-center gap-1.5 rounded-xl border border-[#DED3C5] bg-[#FFFDF9] px-3 py-2 text-[10px] font-bold text-[#5F554B] shadow-[0_2px_7px_rgba(40,30,20,0.035)] transition hover:border-[#D7A05A] hover:bg-white disabled:opacity-60"
+            >
+              <RefreshCw
+                size={13}
+                className={
+                  refreshing
+                    ? "animate-spin"
+                    : ""
+                }
+              />
+              Refresh
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
                 openModal("qrStudio")
               }
               className="hidden items-center gap-1.5 rounded-xl border border-[#DED3C5] bg-[#FFFDF9] px-3 py-2 text-[10px] font-bold text-[#5F554B] shadow-[0_2px_7px_rgba(40,30,20,0.035)] transition hover:border-[#D7A05A] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20 sm:flex"
@@ -310,6 +970,34 @@ function TableSessionsPage() {
         </div>
 
       </div>
+
+      {/* =====================================================
+          ERROR
+      ===================================================== */}
+
+      {error && (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-[#E7C5C0] bg-[#FFF8F7] px-3.5 py-2.5 text-[#8E3D34]">
+
+          <div className="flex items-center gap-2">
+            <AlertCircle size={14} />
+
+            <p className="text-[10px] font-semibold">
+              {error}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              loadTables()
+            }
+            className="text-[9px] font-black underline"
+          >
+            Retry
+          </button>
+
+        </div>
+      )}
 
       {/* =====================================================
           QUICK SNAPSHOT
@@ -350,17 +1038,9 @@ function TableSessionsPage() {
         <MiniStat
           icon={Banknote}
           label="Cash pending"
-          value={`₹${tables
-            .filter(
-              (table) =>
-                table.status ===
-                "Cash Pending"
-            )
-            .reduce(
-              (sum, table) =>
-                sum + (table.bill || 0),
-              0
-            )}`}
+          value={formatINR(
+            cashPendingTotal
+          )}
           detail="Collect at table"
           warning
         />
@@ -375,60 +1055,43 @@ function TableSessionsPage() {
 
         <div className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-xl border border-[#DED3C5] bg-[#EAE4DA] p-1 scrollbar-none">
 
-          {[
-            {
-              label: "All",
-              count: tables.length,
-            },
-            {
-              label: "Indoor Main",
-              count: tables.filter(
-                (table) =>
-                  table.section ===
-                  "Indoor Main"
-              ).length,
-            },
-            {
-              label: "Outdoor Terrace",
-              count: tables.filter(
-                (table) =>
-                  table.section ===
-                  "Outdoor Terrace"
-              ).length,
-            },
-          ].map((item) => {
+          {sectionTabs.map(
+            (item) => {
 
-            const active =
-              section === item.label;
+              const active =
+                section === item.label;
 
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() =>
-                  setSection(item.label)
-                }
-                className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[10px] font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20 ${
-                  active
-                    ? "bg-[#282521] text-white shadow-sm"
-                    : "text-[#6F6458] hover:bg-white/70"
-                }`}
-              >
-                {item.label}
-
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() =>
+                    setSection(
+                      item.label
+                    )
+                  }
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[10px] font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20 ${
                     active
-                      ? "bg-white/10 text-[#E9B85B]"
-                      : "bg-black/5 text-[#9A8D7E]"
+                      ? "bg-[#282521] text-white shadow-sm"
+                      : "text-[#6F6458] hover:bg-white/70"
                   }`}
                 >
-                  {item.count}
-                </span>
+                  {item.label}
 
-              </button>
-            );
-          })}
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+                      active
+                        ? "bg-white/10 text-[#E9B85B]"
+                        : "bg-black/5 text-[#9A8D7E]"
+                    }`}
+                  >
+                    {item.count}
+                  </span>
+
+                </button>
+              );
+            }
+          )}
 
         </div>
 
@@ -443,9 +1106,21 @@ function TableSessionsPage() {
             }
             className="h-9 rounded-xl border border-[#DED3C5] bg-[#FFFDF9] px-3 text-[10px] font-bold text-[#4E463D] outline-none transition focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
           >
-            <option>All Tables</option>
-            <option>Available</option>
-            <option>Cash Pending</option>
+            <option>
+              All Tables
+            </option>
+
+            <option>
+              Available
+            </option>
+
+            <option>
+              Occupied
+            </option>
+
+            <option>
+              Cash Pending
+            </option>
           </select>
 
           <div className="flex overflow-hidden rounded-xl border border-[#DED3C5] bg-[#FFFDF9]">
@@ -578,6 +1253,10 @@ function TableSessionsPage() {
                       table
                     )
                   }
+                  closing={
+                    closingTableId ===
+                    table.id
+                  }
                 />
 
               )
@@ -643,8 +1322,7 @@ function TableSessionsPage() {
 
                           <div
                             className={`flex h-8 w-8 items-center justify-center rounded-lg font-mono text-[10px] font-black ${
-                              table.status ===
-                              "Available"
+                              !table.isOccupied
                                 ? "bg-[#F0ECE5] text-[#71665A]"
                                 : "bg-[#FFF0D2] text-[#C67608]"
                             }`}
@@ -697,27 +1375,30 @@ function TableSessionsPage() {
                       <td className="px-4 py-3">
 
                         <span className="text-[11px] font-black text-[#BE710B]">
-                          {table.bill
-                            ? `₹${table.bill}`
+                          {table.totalBill
+                            ? formatINR(
+                                table.totalBill
+                              )
                             : "—"}
                         </span>
 
                       </td>
 
                       <td className="px-4 py-3">
+
                         <StatusBadge
                           status={
                             table.status
                           }
                         />
+
                       </td>
 
                       <td className="px-4 py-3">
 
                         <div className="flex items-center justify-end gap-1">
 
-                          {table.status !==
-                          "Available" ? (
+                          {table.isOccupied ? (
                             <>
                               <button
                                 type="button"
@@ -742,9 +1423,16 @@ function TableSessionsPage() {
                                     table
                                   )
                                 }
-                                className="h-7 rounded-lg border border-[#DED3C5] bg-white px-2.5 text-[10px] font-bold text-[#554C43] hover:bg-[#F8F2E9] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
+                                disabled={
+                                  closingTableId ===
+                                  table.id
+                                }
+                                className="h-7 rounded-lg border border-[#DED3C5] bg-white px-2.5 text-[10px] font-bold text-[#554C43] hover:bg-[#F8F2E9] disabled:opacity-50"
                               >
-                                Close
+                                {closingTableId ===
+                                table.id
+                                  ? "Closing..."
+                                  : "Close"}
                               </button>
                             </>
                           ) : (
@@ -799,7 +1487,9 @@ function TableSessionsPage() {
 
       )}
 
-      {/* EMPTY */}
+      {/* =====================================================
+          EMPTY
+      ===================================================== */}
 
       {filteredTables.length === 0 && (
 
@@ -848,7 +1538,8 @@ function TableSessionsPage() {
                 onChange={(event) =>
                   setNewTable({
                     ...newTable,
-                    name: event.target.value,
+                    name:
+                      event.target.value,
                   })
                 }
                 placeholder="e.g. Table 11"
@@ -864,7 +1555,8 @@ function TableSessionsPage() {
                 onChange={(event) =>
                   setNewTable({
                     ...newTable,
-                    seats: event.target.value,
+                    seats:
+                      event.target.value,
                   })
                 }
                 className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
@@ -872,12 +1564,15 @@ function TableSessionsPage() {
                 <option value="2">
                   2 seats
                 </option>
+
                 <option value="4">
                   4 seats
                 </option>
+
                 <option value="6">
                   6 seats
                 </option>
+
                 <option value="8">
                   8 seats
                 </option>
@@ -901,6 +1596,7 @@ function TableSessionsPage() {
                 <option>
                   Indoor Main
                 </option>
+
                 <option>
                   Outdoor Terrace
                 </option>
@@ -913,7 +1609,9 @@ function TableSessionsPage() {
           <ModalActions
             onCancel={closeModal}
             primary="Create Table"
-            onPrimary={createTable}
+            onPrimary={
+              createTable
+            }
           />
 
         </Modal>
@@ -986,7 +1684,10 @@ function TableSessionsPage() {
 
             <ModalHeader
               title={`${selectedTable.name} Session`}
-              subtitle={`${selectedTable.section} · ${selectedTable.duration}`}
+              subtitle={`${selectedTable.section} · ${
+                selectedTable.duration ||
+                "Active"
+              }`}
               onClose={closeModal}
             />
 
@@ -1001,7 +1702,9 @@ function TableSessionsPage() {
                   </p>
 
                   <p className="mt-1 text-[27px] font-black tracking-[-0.04em] text-[#2B261F]">
-                    ₹{selectedTable.bill}
+                    {formatINR(
+                      selectedTable.totalBill
+                    )}
                   </p>
 
                 </div>
@@ -1025,7 +1728,8 @@ function TableSessionsPage() {
                 </p>
 
                 <p className="mt-1 font-mono text-sm font-black text-[#302A24]">
-                  {selectedTable.token}
+                  {selectedTable.token ||
+                    "Multiple orders"}
                 </p>
 
               </div>
@@ -1033,11 +1737,11 @@ function TableSessionsPage() {
               <div className="text-right">
 
                 <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#95897B]">
-                  Session
+                  Orders
                 </p>
 
                 <p className="mt-1 text-[11px] font-bold text-[#51483B]">
-                  {selectedTable.duration}
+                  {selectedTable.ordersCount}
                 </p>
 
               </div>
@@ -1049,28 +1753,84 @@ function TableSessionsPage() {
               <div className="border-b border-[#E9E0D6] bg-[#FAF7F2] px-3 py-2">
 
                 <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8E8173]">
-                  Current order
+                  Current orders
                 </p>
 
               </div>
 
-              <div>
+              <div className="max-h-[280px] overflow-y-auto">
 
-                {selectedTable.items?.map(
-                  (item, index) => (
+                {selectedTable.orders?.map(
+                  (order) => (
 
                     <div
-                      key={`${item.name}-${index}`}
-                      className="flex items-center justify-between border-b border-[#EEE6DC] px-3 py-2.5 last:border-0"
+                      key={
+                        order._id ||
+                        order.tokenNumber
+                      }
+                      className="border-b border-[#EEE6DC] last:border-0"
                     >
 
-                      <span className="text-[10px] font-bold text-[#40382F]">
-                        {item.name}
-                      </span>
+                      <div className="flex items-center justify-between px-3 py-2.5">
 
-                      <span className="font-mono text-[10px] font-bold text-[#9A8D7E]">
-                        ×{item.quantity}
-                      </span>
+                        <div>
+
+                          <p className="font-mono text-[10px] font-black text-[#302A24]">
+                            {order.tokenNumber ||
+                              "Order"}
+                          </p>
+
+                          <p className="mt-0.5 text-[9px] text-[#9A8E81]">
+                            {order.customerName ||
+                              "Guest"}{" "}
+                            ·{" "}
+                            {order.status ||
+                              "received"}
+                          </p>
+
+                        </div>
+
+                        <p className="text-[10px] font-black text-[#BE710B]">
+                          {formatINR(
+                            order.total
+                          )}
+                        </p>
+
+                      </div>
+
+                      <div className="px-3 pb-2.5">
+
+                        {order.items?.map(
+                          (
+                            item,
+                            index
+                          ) => (
+
+                            <div
+                              key={
+                                item._id ||
+                                `${item.name}-${index}`
+                              }
+                              className="flex items-center justify-between py-1"
+                            >
+
+                              <span className="text-[10px] font-bold text-[#40382F]">
+                                {item.name}
+                              </span>
+
+                              <span className="font-mono text-[10px] font-bold text-[#9A8D7E]">
+                                ×
+                                {
+                                  item.quantity
+                                }
+                              </span>
+
+                            </div>
+
+                          )
+                        )}
+
+                      </div>
 
                     </div>
 
@@ -1104,10 +1864,26 @@ function TableSessionsPage() {
                     selectedTable
                   )
                 }
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#282521] py-3 text-[10px] font-black text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25"
+                disabled={
+                  closingTableId ===
+                  selectedTable.id
+                }
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#282521] py-3 text-[10px] font-black text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25"
               >
-                <Check size={13} />
-                Close Session
+                {closingTableId ===
+                selectedTable.id ? (
+                  <LoaderCircle
+                    size={13}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Check size={13} />
+                )}
+
+                {closingTableId ===
+                selectedTable.id
+                  ? "Closing..."
+                  : "Close Session"}
               </button>
 
             </div>
@@ -1126,27 +1902,86 @@ function TableSessionsPage() {
           <EditTableModal
             table={selectedTable}
             onClose={closeModal}
-            onSave={(updatedTable) => {
-
-              setTables((current) =>
-                current.map(
-                  (table) =>
-                    table.id ===
-                    selectedTable.id
-                      ? {
-                          ...table,
-                          ...updatedTable,
-                        }
-                      : table
-                )
-              );
-
-              closeModal();
-
-            }}
+            onSave={
+              saveEditedTable
+            }
           />
 
         )}
+
+      {/* =====================================================
+          QR STUDIO
+          ----------------------------------------------------
+          Existing design entry point preserved.
+      ===================================================== */}
+
+      {modal === "qrStudio" && (
+
+        <Modal onClose={closeModal}>
+
+          <ModalHeader
+            title="QR Studio"
+            subtitle="Select a table to view its QR."
+            onClose={closeModal}
+          />
+
+          <div className="mt-5 grid grid-cols-2 gap-2">
+
+            {tables.map(
+              (table) => (
+
+                <button
+                  key={table.id}
+                  type="button"
+                  onClick={() =>
+                    openModal(
+                      "qr",
+                      table
+                    )
+                  }
+                  className="flex items-center justify-between rounded-xl border border-[#DED3C5] bg-white px-3 py-2.5 text-left hover:bg-[#FFF7E9]"
+                >
+
+                  <span>
+
+                    <span className="block text-[10px] font-black text-[#302A24]">
+                      {table.name}
+                    </span>
+
+                    <span className="text-[8px] text-[#9A8E81]">
+                      {table.isOccupied
+                        ? "Occupied"
+                        : "Available"}
+                    </span>
+
+                  </span>
+
+                  <QrCode
+                    size={13}
+                    className="text-[#B96D0B]"
+                  />
+
+                </button>
+
+              )
+            )}
+
+          </div>
+
+        </Modal>
+
+      )}
+
+      <Toast
+        toast={toast}
+        onClose={() =>
+          setToast({
+            open: false,
+            type: "success",
+            message: "",
+          })
+        }
+      />
 
     </section>
   );
@@ -1163,9 +1998,10 @@ function FloorTable({
   onDelete,
   onDetails,
   onClose,
+  closing,
 }) {
   const occupied =
-    table.status !== "Available";
+    table.isOccupied;
 
   return (
     <div
@@ -1214,7 +2050,9 @@ function FloorTable({
 
           </div>
 
-          <StatusDot occupied={occupied} />
+          <StatusDot
+            occupied={occupied}
+          />
 
         </div>
 
@@ -1262,7 +2100,8 @@ function FloorTable({
                 </p>
 
                 <p className="mt-0.5 font-mono text-[15px] font-black text-[#2C2721]">
-                  {table.token}
+                  {table.token ||
+                    `${table.ordersCount} orders`}
                 </p>
 
               </div>
@@ -1274,7 +2113,9 @@ function FloorTable({
                 </p>
 
                 <p className="mt-0.5 text-[15px] font-black text-[#C0710A]">
-                  ₹{table.bill}
+                  {formatINR(
+                    table.totalBill
+                  )}
                 </p>
 
               </div>
@@ -1295,7 +2136,8 @@ function FloorTable({
                 </span>
 
                 <span className="ml-auto text-[10px] font-bold text-[#95897B]">
-                  {table.duration}
+                  {table.duration ||
+                    "Active"}
                 </span>
 
               </div>
@@ -1306,7 +2148,8 @@ function FloorTable({
                     (item) =>
                       `${item.name} ×${item.quantity}`
                   )
-                  .join(" · ")}
+                  .join(" · ") ||
+                  "Active session"}
               </p>
 
             </div>
@@ -1319,16 +2162,26 @@ function FloorTable({
                 className="flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-[#282521] text-[10px] font-black text-white transition hover:bg-[#1D1B18] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25"
               >
                 Open session
-                <ArrowUpRight size={11} />
+                <ArrowUpRight
+                  size={11}
+                />
               </button>
 
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#DDD2C4] bg-white text-[#6C6257] transition hover:border-[#CDBDA8] hover:bg-[#F8F1E6] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
+                disabled={closing}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#DDD2C4] bg-white text-[#6C6257] transition hover:border-[#CDBDA8] hover:bg-[#F8F1E6] disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/20"
                 title="Close session"
               >
-                <Check size={13} />
+                {closing ? (
+                  <LoaderCircle
+                    size={13}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Check size={13} />
+                )}
               </button>
 
             </div>
@@ -1420,7 +2273,9 @@ function MiniStat({
    STATUS DOT
 ============================================================ */
 
-function StatusDot({ occupied }) {
+function StatusDot({
+  occupied,
+}) {
   return (
     <span
       className={`flex h-5 w-5 items-center justify-center rounded-full ${
@@ -1444,18 +2299,23 @@ function StatusDot({ occupied }) {
    STATUS BADGE
 ============================================================ */
 
-function StatusBadge({ status }) {
+function StatusBadge({
+  status,
+}) {
   const occupied =
     status !== "Available";
 
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black ${
-        occupied
+        status === "Cash Pending"
+          ? "bg-[#FFF0D2] text-[#BC700B]"
+          : occupied
           ? "bg-[#FFF0D2] text-[#BC700B]"
           : "bg-[#EEEAE2] text-[#74695E]"
       }`}
     >
+
       <span
         className={`h-1.5 w-1.5 rounded-full ${
           occupied
@@ -1465,6 +2325,7 @@ function StatusBadge({ status }) {
       />
 
       {status}
+
     </span>
   );
 }
@@ -1473,13 +2334,19 @@ function StatusBadge({ status }) {
    LEGEND
 ============================================================ */
 
-function Legend({ dot, label }) {
+function Legend({
+  dot,
+  label,
+}) {
   return (
     <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#918477]">
+
       <span
         className={`h-1.5 w-1.5 rounded-full ${dot}`}
       />
+
       {label}
+
     </span>
   );
 }
@@ -1491,9 +2358,20 @@ function Legend({ dot, label }) {
 function Modal({
   children,
   wide = false,
+  onClose,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#211D18]/55 p-4 backdrop-blur-[2px]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#211D18]/55 p-4 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          onClose?.();
+        }
+      }}
+    >
 
       <div
         className={`max-h-[90vh] w-full overflow-y-auto rounded-[18px] border border-[#DED3C5] bg-[#FFFDF9] p-5 shadow-[0_25px_70px_rgba(30,24,17,0.24)] ${
@@ -1508,6 +2386,10 @@ function Modal({
     </div>
   );
 }
+
+/* ============================================================
+   MODAL HEADER
+============================================================ */
 
 function ModalHeader({
   title,
@@ -1564,6 +2446,10 @@ function FormField({
   );
 }
 
+/* ============================================================
+   MODAL ACTIONS
+============================================================ */
+
 function ModalActions({
   onCancel,
   primary,
@@ -1605,7 +2491,9 @@ function EditTableModal({
     useState(table.name);
 
   const [seats, setSeats] =
-    useState(String(table.seats));
+    useState(
+      String(table.seats)
+    );
 
   const [section, setSection] =
     useState(table.section);
@@ -1646,6 +2534,7 @@ function EditTableModal({
             }
             className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
           >
+
             <option value="2">
               2 seats
             </option>
@@ -1661,6 +2550,7 @@ function EditTableModal({
             <option value="8">
               8 seats
             </option>
+
           </select>
 
         </FormField>
@@ -1676,6 +2566,7 @@ function EditTableModal({
             }
             className="input-style focus:outline-none focus:border-[#D49A48] focus:ring-2 focus:ring-[#D49A48]/10"
           >
+
             <option>
               Indoor Main
             </option>
@@ -1683,6 +2574,7 @@ function EditTableModal({
             <option>
               Outdoor Terrace
             </option>
+
           </select>
 
         </FormField>
