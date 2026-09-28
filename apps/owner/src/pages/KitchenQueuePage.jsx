@@ -23,6 +23,21 @@ import {
   useState,
 } from "react";
 
+import {
+  useDispatch,
+  useSelector,
+} from "react-redux";
+
+import {
+  fetchMerchantOrders,
+  changeOrderStatus,
+} from "../redux/thunks/orderThunks";
+
+
+/* =========================================================
+   CATEGORIES
+========================================================= */
+
 const categories = [
   {
     label: "All",
@@ -46,113 +61,271 @@ const categories = [
   },
 ];
 
+
+/* =========================================================
+   CATEGORY MAP
+========================================================= */
+
 const categoryMap = {
   "Vada Pav": "Snacks",
   "Filter Coffee": "Tea & Coffee",
   "Bun Maska": "Snacks",
   "Diet Coke": "Cold Drinks",
   Samosa: "Snacks",
+  "Sweet Lassi": "Cold Drinks",
+  "Iced Coffee": "Cold Drinks",
+  "Cutting Chai": "Tea & Coffee",
+  "Masala Tea": "Tea & Coffee",
+  Jalebi: "Sweets",
 };
 
-const initialTickets = [
-  {
-    id: 1,
-    token: "A-003",
-    type: "COUNTER PICKUP",
-    customer: "Guest",
-    time: "Just placed",
-    items: [
-      {
-        name: "Vada Pav",
-        quantity: 1,
-        ready: true,
-      },
-      {
-        name: "Filter Coffee",
-        quantity: 1,
-        ready: true,
-      },
-      {
-        name: "Bun Maska",
-        quantity: 3,
-        ready: true,
-      },
-      {
-        name: "Diet Coke",
-        quantity: 1,
-        ready: false,
-      },
-      {
-        name: "Samosa",
-        quantity: 1,
-        ready: false,
-      },
-    ],
-  },
 
-  {
-    id: 2,
-    token: "A-004",
-    type: "TABLE ORDER",
-    customer: "Guest",
-    time: "2 min ago",
-    items: [
-      {
-        name: "Filter Coffee",
-        quantity: 2,
-        ready: true,
-      },
-      {
-        name: "Samosa",
-        quantity: 2,
-        ready: false,
-      },
-    ],
-  },
+/* =========================================================
+   FORMAT ORDER TIME
+========================================================= */
 
-  {
-    id: 3,
-    token: "A-005",
-    type: "COUNTER PICKUP",
-    customer: "Guest",
-    time: "4 min ago",
-    items: [
-      {
-        name: "Vada Pav",
-        quantity: 2,
-        ready: false,
-      },
-      {
-        name: "Diet Coke",
-        quantity: 1,
-        ready: false,
-      },
-    ],
-  },
-];
+function formatOrderTime(createdAt) {
+  if (!createdAt) {
+    return "";
+  }
+
+  const created = new Date(createdAt);
+  const now = new Date();
+
+  const diffMs =
+    now.getTime() -
+    created.getTime();
+
+  const diffMinutes =
+    Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) {
+    return "Just placed";
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours =
+    Math.floor(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours} hr ago`;
+  }
+
+  return created.toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+    }
+  );
+}
+
+
+/* =========================================================
+   MAP API ORDER → KITCHEN TICKET
+========================================================= */
+
+function mapApiOrderToKitchenTicket(order) {
+  const status =
+    String(order.status || "")
+      .toUpperCase();
+
+  const items =
+    Array.isArray(order.items)
+      ? order.items
+      : [];
+
+  return {
+    id: order._id,
+
+    token:
+      order.tokenNumber ||
+      "N/A",
+
+    type: order.tableId
+      ? "TABLE ORDER"
+      : "COUNTER PICKUP",
+
+    customer:
+      order.customerName ||
+      "Guest",
+
+    time: formatOrderTime(
+      order.createdAt
+    ),
+
+    status,
+
+    items: items.map((item) => ({
+      name:
+        item.name ||
+        "Item",
+
+      quantity:
+        Number(item.quantity) || 0,
+
+      /*
+       * The current backend has order-level
+       * status, not item-level preparation status.
+       *
+       * Therefore READY means the entire order
+       * is prepared.
+       */
+      ready:
+        status === "READY",
+    })),
+
+    originalOrder: order,
+  };
+}
+
+
+/* =========================================================
+   MAIN PAGE
+========================================================= */
 
 function KitchenQueuePage() {
-  const [tickets, setTickets] =
-    useState(initialTickets);
+  const dispatch = useDispatch();
 
-  const [selectedCategory, setSelectedCategory] =
-    useState("All");
 
-  const [isFullscreen, setIsFullscreen] =
-    useState(false);
+  /* =======================================================
+     REDUX
+  ======================================================= */
+
+  const merchant = useSelector(
+    (state) =>
+      state.merchant.merchant
+  );
+
+  const apiOrders = useSelector(
+    (state) =>
+      state.orders.orders
+  );
+
+  const loading = useSelector(
+    (state) =>
+      state.orders.loading
+  );
+
+  const error = useSelector(
+    (state) =>
+      state.orders.error
+  );
+
+
+  /* =======================================================
+     LOCAL UI STATE
+  ======================================================= */
+
+  const [
+    selectedCategory,
+    setSelectedCategory,
+  ] = useState("All");
+
+  const [
+    isFullscreen,
+    setIsFullscreen,
+  ] = useState(false);
+
+  const [
+    updatingOrderId,
+    setUpdatingOrderId,
+  ] = useState(null);
 
   /*
-   * =========================================================
-   * FULLSCREEN STATE
-   * =========================================================
+   * Local item preparation state.
+   *
+   * This is only for the visual checklist.
+   * The real persisted status remains the
+   * order-level backend status.
    */
+  const [
+    preparedItems,
+    setPreparedItems,
+  ] = useState({});
+
+
+  /* =======================================================
+     FETCH ORDERS
+     
+     New orders automatically appear.
+     Updated orders automatically refresh.
+  ======================================================= */
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(
-        Boolean(document.fullscreenElement)
-      );
+    if (!merchant?._id) {
+      return;
+    }
+
+    dispatch(
+      fetchMerchantOrders()
+    );
+
+    const interval =
+      setInterval(() => {
+        dispatch(
+          fetchMerchantOrders()
+        );
+      }, 5000);
+
+    return () => {
+      clearInterval(interval);
     };
+  }, [
+    dispatch,
+    merchant?._id,
+  ]);
+
+
+  /* =======================================================
+     MAP API ORDERS
+  ======================================================= */
+
+  const tickets = useMemo(() => {
+    return apiOrders
+      .filter((order) => {
+        const status =
+          String(
+            order.status || ""
+          ).toUpperCase();
+
+        /*
+         * Kitchen should only show orders
+         * which are still in kitchen workflow.
+         *
+         * COMPLETED / COLLECTED are no longer
+         * kitchen orders.
+         */
+        return (
+          status === "RECEIVED" ||
+          status === "PREPARING" ||
+          status === "READY"
+        );
+      })
+      .map(
+        mapApiOrderToKitchenTicket
+      );
+  }, [apiOrders]);
+
+
+
+
+  /* =======================================================
+     FULLSCREEN STATE
+  ======================================================= */
+
+  useEffect(() => {
+    const handleFullscreenChange =
+      () => {
+        setIsFullscreen(
+          Boolean(
+            document.fullscreenElement
+          )
+        );
+      };
 
     document.addEventListener(
       "fullscreenchange",
@@ -167,146 +340,241 @@ function KitchenQueuePage() {
     };
   }, []);
 
-  /*
-   * =========================================================
-   * TOGGLE ITEM
-   * =========================================================
-   */
+
+  /* =======================================================
+     TOGGLE ITEM
+     
+     Visual preparation only.
+  ======================================================= */
 
   const toggleItem = (
     ticketId,
     itemIndex
   ) => {
-    setTickets((current) =>
-      current.map((ticket) => {
-        if (ticket.id !== ticketId) {
-          return ticket;
-        }
+    setPreparedItems(
+      (current) => {
+        const existing =
+          current[
+            ticketId
+          ] || [];
+
+        const next =
+          [...existing];
+
+        next[itemIndex] =
+          !next[itemIndex];
 
         return {
-          ...ticket,
-
-          items: ticket.items.map(
-            (item, index) =>
-              index === itemIndex
-                ? {
-                    ...item,
-                    ready: !item.ready,
-                  }
-                : item
-          ),
+          ...current,
+          [ticketId]: next,
         };
-      })
+      }
     );
   };
 
-  /*
-   * =========================================================
-   * MARK READY
-   * =========================================================
-   */
 
-  const markReady = (ticketId) => {
-    setTickets((current) =>
-      current.filter(
-        (ticket) =>
-          ticket.id !== ticketId
-      )
-    );
-  };
+  /* =======================================================
+     MARK ORDER READY
+  ======================================================= */
 
-  /*
-   * =========================================================
-   * CATEGORY FILTER
-   * =========================================================
-   */
+  const markReady = async (
+    ticket
+  ) => {
+    const orderId =
+      ticket?.originalOrder?._id ||
+      ticket?.id;
 
-  const visibleTickets = useMemo(() => {
-    if (selectedCategory === "All") {
-      return tickets;
+    if (!orderId) {
+      console.error(
+        "Kitchen order ID not available."
+      );
+
+      return;
     }
 
-    return tickets.filter((ticket) =>
-      ticket.items.some(
-        (item) =>
-          categoryMap[item.name] ===
-          selectedCategory
-      )
-    );
-  }, [
-    tickets,
-    selectedCategory,
-  ]);
-
-  /*
-   * =========================================================
-   * QUEUE STATISTICS
-   * =========================================================
-   */
-
-  const queueStats = useMemo(() => {
-    let totalItems = 0;
-    let readyItems = 0;
-
-    tickets.forEach((ticket) => {
-      totalItems += ticket.items.length;
-
-      readyItems += ticket.items.filter(
-        (item) => item.ready
-      ).length;
-    });
-
-    const completion =
-      totalItems > 0
-        ? Math.round(
-            (readyItems / totalItems) * 100
-          )
-        : 0;
-
-    const readyOrders = tickets.filter(
-      (ticket) =>
-        ticket.items.every(
-          (item) => item.ready
-        )
-    ).length;
-
-    const preparingOrders =
-      tickets.length - readyOrders;
-
-    return {
-      totalItems,
-      readyItems,
-      completion,
-      readyOrders,
-      preparingOrders,
-    };
-  }, [tickets]);
-
-  /*
-   * =========================================================
-   * FULLSCREEN
-   * =========================================================
-   */
-
-  const handleFullscreen = async () => {
-    const element =
-      document.getElementById(
-        "kds-screen"
-      );
+    /*
+     * Don't send READY again.
+     */
+    if (
+      ticket.status ===
+      "READY"
+    ) {
+      return;
+    }
 
     try {
-      if (!document.fullscreenElement) {
-        await element.requestFullscreen();
-      } else {
-        await document.exitFullscreen();
-      }
-    } catch (error) {
+      setUpdatingOrderId(
+        orderId
+      );
+
+      await dispatch(
+        changeOrderStatus(
+          orderId,
+          "ready"
+        )
+      );
+
+      /*
+       * Immediately refresh Redux
+       * so every owner page sees the
+       * same updated order.
+       */
+      await dispatch(
+        fetchMerchantOrders()
+      );
+
+    } catch (updateError) {
       console.error(
-        "Fullscreen error:",
-        error
+        "Failed to mark order ready:",
+        updateError
+      );
+    } finally {
+      setUpdatingOrderId(
+        null
       );
     }
   };
+
+
+  /* =======================================================
+     CATEGORY FILTER
+  ======================================================= */
+
+  const visibleTickets =
+    useMemo(() => {
+      if (
+        selectedCategory ===
+        "All"
+      ) {
+        return tickets;
+      }
+
+      return tickets.filter(
+        (ticket) =>
+          ticket.items.some(
+            (item) =>
+              categoryMap[
+                item.name
+              ] ===
+              selectedCategory
+          )
+      );
+    }, [
+      tickets,
+      selectedCategory,
+    ]);
+
+
+  /* =======================================================
+     QUEUE STATISTICS
+  ======================================================= */
+
+  const queueStats =
+    useMemo(() => {
+      let totalItems = 0;
+
+      let readyItems = 0;
+
+      tickets.forEach(
+        (ticket) => {
+          totalItems +=
+            ticket.items.length;
+
+          if (
+            ticket.status ===
+            "READY"
+          ) {
+            readyItems +=
+              ticket.items.length;
+
+            return;
+          }
+
+          const localReady =
+            preparedItems[
+              ticket.id
+            ] || [];
+
+          readyItems +=
+            localReady.filter(
+              Boolean
+            ).length;
+        }
+      );
+
+      const completion =
+        totalItems > 0
+          ? Math.round(
+              (readyItems /
+                totalItems) *
+                100
+            )
+          : 0;
+
+      const readyOrders =
+        tickets.filter(
+          (ticket) =>
+            ticket.status ===
+            "READY"
+        ).length;
+
+      const preparingOrders =
+        tickets.filter(
+          (ticket) =>
+            ticket.status ===
+              "PREPARING" ||
+            ticket.status ===
+              "RECEIVED"
+        ).length;
+
+      return {
+        totalItems,
+        readyItems,
+        completion,
+        readyOrders,
+        preparingOrders,
+      };
+    }, [
+      tickets,
+      preparedItems,
+    ]);
+
+
+  /* =======================================================
+     FULLSCREEN
+  ======================================================= */
+
+  const handleFullscreen =
+    async () => {
+      const element =
+        document.getElementById(
+          "kds-screen"
+        );
+
+      if (!element) {
+        return;
+      }
+
+      try {
+        if (
+          !document.fullscreenElement
+        ) {
+          await element.requestFullscreen();
+        } else {
+          await document.exitFullscreen();
+        }
+      } catch (fullscreenError) {
+        console.error(
+          "Fullscreen error:",
+          fullscreenError
+        );
+      }
+    };
+
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <div
@@ -324,10 +592,12 @@ function KitchenQueuePage() {
           <div className="flex items-center gap-3">
 
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#282521] text-[#E6A23C] shadow-sm">
+
               <ChefHat
                 size={19}
                 strokeWidth={2}
               />
+
             </div>
 
             <div>
@@ -356,6 +626,7 @@ function KitchenQueuePage() {
 
           </div>
 
+
           <div className="flex items-center gap-2">
 
             <div className="hidden items-center gap-2 rounded-lg border border-[#E5D8C8] bg-white px-3 py-2 sm:flex">
@@ -371,16 +642,23 @@ function KitchenQueuePage() {
 
             </div>
 
+
             <button
               type="button"
-              onClick={handleFullscreen}
+              onClick={
+                handleFullscreen
+              }
               className="flex h-9 items-center gap-2 rounded-lg bg-[#282521] px-3.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-[#1D1B18]"
             >
 
               {isFullscreen ? (
-                <Minimize2 size={14} />
+                <Minimize2
+                  size={14}
+                />
               ) : (
-                <Maximize2 size={14} />
+                <Maximize2
+                  size={14}
+                />
               )}
 
               <span className="hidden sm:inline">
@@ -395,6 +673,7 @@ function KitchenQueuePage() {
 
         </div>
 
+
         {/* =====================================================
             CATEGORY + QUEUE STATUS
         ===================================================== */}
@@ -403,58 +682,81 @@ function KitchenQueuePage() {
 
           <div className="flex max-w-full items-center overflow-x-auto rounded-xl border border-[#E4D9CB] bg-white p-1 shadow-sm">
 
-            {categories.map((category) => {
+            {categories.map(
+              (category) => {
+                const Icon =
+                  category.icon;
 
-              const Icon = category.icon;
+                const active =
+                  selectedCategory ===
+                  category.label;
 
-              const active =
-                selectedCategory ===
-                category.label;
-
-              return (
-                <button
-                  key={category.label}
-                  type="button"
-                  onClick={() =>
-                    setSelectedCategory(
+                return (
+                  <button
+                    key={
                       category.label
-                    )
-                  }
-                  className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25 ${
-                    active
-                      ? "bg-[#282521] text-white shadow-sm"
-                      : "text-[#766A5D] hover:bg-[#F7F3ED]"
-                  }`}
-                >
+                    }
+                    type="button"
+                    onClick={() =>
+                      setSelectedCategory(
+                        category.label
+                      )
+                    }
+                    className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D49A48]/25 ${
+                      active
+                        ? "bg-[#282521] text-white shadow-sm"
+                        : "text-[#766A5D] hover:bg-[#F7F3ED]"
+                    }`}
+                  >
 
-                  <Icon
-                    size={12}
-                    strokeWidth={2}
-                  />
+                    <Icon
+                      size={12}
+                      strokeWidth={2}
+                    />
 
-                  {category.label}
+                    {category.label}
 
-                </button>
-              );
-            })}
+                  </button>
+                );
+              }
+            )}
 
           </div>
+
 
           <div className="hidden items-center gap-4 text-[10px] font-medium text-[#877A6D] md:flex">
 
             <span className="flex items-center gap-1.5">
+
               <span className="h-2 w-2 rounded-full bg-[#E4A12E]" />
+
               Preparing
+
             </span>
 
             <span className="flex items-center gap-1.5">
+
               <span className="h-2 w-2 rounded-full bg-[#35A987]" />
+
               Ready
+
             </span>
 
           </div>
 
         </div>
+
+
+        {/* =====================================================
+            ERROR
+        ===================================================== */}
+
+        {error && (
+          <div className="mb-4 rounded-xl border border-[#E7CFC8] bg-[#FFF7F5] px-4 py-3 text-[11px] font-medium text-[#A14E43]">
+            Unable to refresh kitchen orders.
+          </div>
+        )}
+
 
         {/* =====================================================
             MAIN WORKSPACE
@@ -482,7 +784,9 @@ function KitchenQueuePage() {
                 </span>
 
                 <span className="rounded-full bg-[#EEE7DD] px-2 py-0.5 text-[9px] font-bold text-[#7B6E61]">
-                  {visibleTickets.length}
+                  {
+                    visibleTickets.length
+                  }
                 </span>
 
               </div>
@@ -493,15 +797,42 @@ function KitchenQueuePage() {
 
             </div>
 
-            {visibleTickets.length > 0 ? (
+
+            {loading &&
+            tickets.length ===
+              0 ? (
+
+              <div className="flex min-h-[390px] items-center justify-center rounded-xl border border-[#DDD2C4] bg-white">
+
+                <p className="text-[11px] font-medium text-[#8B7E70]">
+                  Loading kitchen orders...
+                </p>
+
+              </div>
+
+            ) : visibleTickets.length >
+              0 ? (
 
               <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 2xl:grid-cols-3">
 
                 {visibleTickets.map(
                   (ticket) => (
                     <KitchenTicket
-                      key={ticket.id}
-                      ticket={ticket}
+                      key={
+                        ticket.id
+                      }
+                      ticket={
+                        ticket
+                      }
+                      preparedItems={
+                        preparedItems[
+                          ticket.id
+                        ] || []
+                      }
+                      updating={
+                        updatingOrderId ===
+                        ticket.id
+                      }
                       onToggleItem={
                         toggleItem
                       }
@@ -521,6 +852,7 @@ function KitchenQueuePage() {
             )}
 
           </main>
+
 
           {/* =================================================
               QUEUE OVERVIEW
@@ -545,12 +877,17 @@ function KitchenQueuePage() {
                 </div>
 
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F4E6D1] text-[#C77C1F]">
-                  <Layers3 size={14} />
+
+                  <Layers3
+                    size={14}
+                  />
+
                 </div>
 
               </div>
 
             </div>
+
 
             <div className="border-b border-[#E9E0D5] px-4 py-4">
 
@@ -561,7 +898,9 @@ function KitchenQueuePage() {
               <div className="mt-1 flex items-end gap-2">
 
                 <span className="text-[30px] font-semibold leading-none tracking-[-0.04em] text-[#28231F]">
-                  {tickets.length}
+                  {
+                    tickets.length
+                  }
                 </span>
 
                 <span className="mb-0.5 text-[11px] font-semibold text-[#35A987]">
@@ -571,6 +910,7 @@ function KitchenQueuePage() {
               </div>
 
             </div>
+
 
             <div className="border-b border-[#E9E0D5] px-4 py-4">
 
@@ -600,6 +940,7 @@ function KitchenQueuePage() {
 
             </div>
 
+
             <div className="border-b border-[#E9E0D5] px-4 py-4">
 
               <div className="mb-2 flex items-center justify-between">
@@ -609,10 +950,14 @@ function KitchenQueuePage() {
                 </p>
 
                 <span className="font-mono text-[10px] font-bold text-[#302A24]">
-                  {queueStats.completion}%
+                  {
+                    queueStats.completion
+                  }
+                  %
                 </span>
 
               </div>
+
 
               <div className="h-1.5 overflow-hidden rounded-full bg-[#EEE8DF]">
 
@@ -625,18 +970,27 @@ function KitchenQueuePage() {
 
               </div>
 
+
               <p className="mt-2 text-[10px] text-[#968A7D]">
-                {queueStats.readyItems} of{" "}
-                {queueStats.totalItems} items prepared
+                {
+                  queueStats.readyItems
+                }{" "}
+                of{" "}
+                {
+                  queueStats.totalItems
+                }{" "}
+                items prepared
               </p>
 
             </div>
+
 
             <div className="px-4 py-4">
 
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.11em] text-[#95897C]">
                 Kitchen workflow
               </p>
+
 
               <WorkflowStep
                 number="01"
@@ -677,32 +1031,44 @@ function KitchenQueuePage() {
   );
 }
 
+
 /* =========================================================
    KITCHEN TICKET
 ========================================================= */
 
 function KitchenTicket({
   ticket,
+  preparedItems,
+  updating,
   onToggleItem,
   onMarkReady,
 }) {
-  const readyCount =
-    ticket.items.filter(
-      (item) => item.ready
-    ).length;
-
   const totalCount =
     ticket.items.length;
+
+  const readyCount =
+    ticket.status ===
+    "READY"
+      ? totalCount
+      : preparedItems.filter(
+          Boolean
+        ).length;
 
   const progress =
     totalCount > 0
       ? Math.round(
-          (readyCount / totalCount) * 100
+          (readyCount /
+            totalCount) *
+            100
         )
       : 0;
 
   const isComplete =
-    readyCount === totalCount;
+    ticket.status ===
+      "READY" ||
+    readyCount ===
+      totalCount;
+
 
   return (
     <article
@@ -712,6 +1078,10 @@ function KitchenTicket({
           : "border-[#403B35]"
       }`}
     >
+
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <div className="px-4 pb-3.5 pt-3.5">
 
@@ -733,11 +1103,13 @@ function KitchenTicket({
 
           </div>
 
+
           <span className="text-[10px] text-[#837A70]">
             {ticket.time}
           </span>
 
         </div>
+
 
         <div className="mt-3 flex items-end justify-between">
 
@@ -747,15 +1119,19 @@ function KitchenTicket({
               {ticket.token}
             </h2>
 
+
             <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-[#9F968B]">
 
-              <UserRound size={10} />
+              <UserRound
+                size={10}
+              />
 
               {ticket.customer}
 
             </div>
 
           </div>
+
 
           <div className="text-right">
 
@@ -766,7 +1142,8 @@ function KitchenTicket({
                   : "text-[#E6A23C]"
               }`}
             >
-              {readyCount}/{totalCount}
+              {readyCount}/
+              {totalCount}
             </div>
 
             <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#756D64]">
@@ -779,72 +1156,103 @@ function KitchenTicket({
 
       </div>
 
+
+      {/* =====================================================
+          ITEMS
+      ===================================================== */}
+
       <div className="border-t border-white/[0.06] px-3 py-3">
 
         <div className="space-y-1.5">
 
           {ticket.items.map(
-            (item, index) => (
+            (item, index) => {
 
-              <button
-                key={`${item.name}-${index}`}
-                type="button"
-                onClick={() =>
-                  onToggleItem(
-                    ticket.id,
+              const itemReady =
+                ticket.status ===
+                  "READY" ||
+                Boolean(
+                  preparedItems[
                     index
-                  )
-                }
-                className="flex w-full items-center gap-2.5 rounded-lg bg-[#332F2A] px-2.5 py-2 text-left transition hover:bg-[#3A3631]"
-              >
+                  ]
+                );
 
-                <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ${
-                    item.ready
-                      ? "bg-[#2D9D7E] text-white"
-                      : "border border-[#5C554C] text-[#746D64]"
-                  }`}
+              return (
+                <button
+                  key={`${item.name}-${index}`}
+                  type="button"
+                  disabled={
+                    ticket.status ===
+                    "READY"
+                  }
+                  onClick={() =>
+                    onToggleItem(
+                      ticket.id,
+                      index
+                    )
+                  }
+                  className="flex w-full items-center gap-2.5 rounded-lg bg-[#332F2A] px-2.5 py-2 text-left transition hover:bg-[#3A3631] disabled:cursor-default"
                 >
 
-                  {item.ready ? (
-                    <Check
-                      size={12}
-                      strokeWidth={3}
-                    />
-                  ) : (
-                    <Circle size={8} />
-                  )}
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ${
+                      itemReady
+                        ? "bg-[#2D9D7E] text-white"
+                        : "border border-[#5C554C] text-[#746D64]"
+                    }`}
+                  >
 
-                </span>
+                    {itemReady ? (
+                      <Check
+                        size={12}
+                        strokeWidth={3}
+                      />
+                    ) : (
+                      <Circle
+                        size={8}
+                      />
+                    )}
 
-                <span
-                  className={`min-w-0 flex-1 truncate text-[11px] font-semibold ${
-                    item.ready
-                      ? "text-[#78C9B2] line-through"
-                      : "text-[#E9E2D8]"
-                  }`}
-                >
-                  {item.name}
-                </span>
+                  </span>
 
-                <span
-                  className={`font-mono text-[10px] font-bold ${
-                    item.ready
-                      ? "text-[#5AA38F]"
-                      : "text-[#E6A23C]"
-                  }`}
-                >
-                  ×{item.quantity}
-                </span>
 
-              </button>
+                  <span
+                    className={`min-w-0 flex-1 truncate text-[11px] font-semibold ${
+                      itemReady
+                        ? "text-[#78C9B2] line-through"
+                        : "text-[#E9E2D8]"
+                    }`}
+                  >
+                    {item.name}
+                  </span>
 
-            )
+
+                  <span
+                    className={`font-mono text-[10px] font-bold ${
+                      itemReady
+                        ? "text-[#5AA38F]"
+                        : "text-[#E6A23C]"
+                    }`}
+                  >
+                    ×
+                    {
+                      item.quantity
+                    }
+                  </span>
+
+                </button>
+              );
+            }
           )}
 
         </div>
 
       </div>
+
+
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
 
       <div className="border-t border-white/[0.06] px-3 pb-3 pt-2.5">
 
@@ -865,6 +1273,7 @@ function KitchenTicket({
 
             </div>
 
+
             <span
               className={`font-mono text-[9px] font-bold ${
                 isComplete
@@ -876,6 +1285,7 @@ function KitchenTicket({
             </span>
 
           </div>
+
 
           <div className="h-1 overflow-hidden rounded-full bg-[#464139]">
 
@@ -894,19 +1304,46 @@ function KitchenTicket({
 
         </div>
 
+
         <button
           type="button"
-          onClick={() =>
-            onMarkReady(ticket.id)
+          disabled={
+            updating ||
+            ticket.status ===
+              "READY"
           }
-          className={`flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[10px] font-bold transition ${
+          onClick={() =>
+            onMarkReady(
+              ticket
+            )
+          }
+          className={`flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
             isComplete
               ? "bg-[#35A987] text-white hover:bg-[#43B995]"
               : "bg-[#3A3631] text-[#DED6CD] hover:bg-[#454039]"
           }`}
         >
 
-          {isComplete ? (
+          {updating ? (
+            <>
+              <TimerReset
+                size={12}
+                className="animate-spin"
+              />
+
+              Updating...
+            </>
+          ) : ticket.status ===
+            "READY" ? (
+            <>
+              <Check
+                size={13}
+                strokeWidth={3}
+              />
+
+              Ready
+            </>
+          ) : isComplete ? (
             <>
               <Check
                 size={13}
@@ -917,12 +1354,15 @@ function KitchenTicket({
             </>
           ) : (
             <>
-              <Zap size={12} />
+              <Zap
+                size={12}
+              />
 
               Complete remaining
 
-              <ChevronRight size={12} />
-
+              <ChevronRight
+                size={12}
+              />
             </>
           )}
 
@@ -933,6 +1373,7 @@ function KitchenTicket({
     </article>
   );
 }
+
 
 /* =========================================================
    STATUS ROW
@@ -958,6 +1399,7 @@ function StatusRow({
 
       </div>
 
+
       <span className="font-mono text-[10px] font-bold text-[#302A24]">
         {value}
       </span>
@@ -965,6 +1407,7 @@ function StatusRow({
     </div>
   );
 }
+
 
 /* =========================================================
    WORKFLOW STEP
@@ -988,6 +1431,7 @@ function WorkflowStep({
         {number}
       </span>
 
+
       <span
         className={`text-[11px] font-semibold ${
           active
@@ -1002,6 +1446,7 @@ function WorkflowStep({
   );
 }
 
+
 /* =========================================================
    WORKFLOW LINE
 ========================================================= */
@@ -1011,6 +1456,7 @@ function WorkflowLine() {
     <div className="ml-3 h-3 border-l border-dashed border-[#D9CFC2]" />
   );
 }
+
 
 /* =========================================================
    EMPTY STATE
@@ -1023,12 +1469,18 @@ function EmptyState() {
       <div className="max-w-xs text-center">
 
         <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#F3E4CF] text-[#C77C1F]">
-          <ChefHat size={21} />
+
+          <ChefHat
+            size={21}
+          />
+
         </div>
+
 
         <h2 className="text-sm font-semibold text-[#302A24]">
           Kitchen queue is clear
         </h2>
+
 
         <p className="mt-1 text-[10px] leading-5 text-[#8B7E70]">
           There are no orders waiting for
@@ -1041,5 +1493,6 @@ function EmptyState() {
     </div>
   );
 }
+
 
 export default KitchenQueuePage;
