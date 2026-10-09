@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import {
   Avatar,
   Box,
@@ -6,6 +8,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
@@ -23,15 +26,16 @@ import {
   HistoryRounded,
   LogoutRounded,
   FiberManualRecordRounded,
+  ChevronLeftRounded,
+  ChevronRightRounded,
 } from "@mui/icons-material";
 
-import { NavLink } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+
 import { logout } from "../../redux/slices/authSlice";
 import { clearAuthSession } from "../../utils/authStorage";
 
- 
 const navigation = [
   {
     section: "OPERATIONS",
@@ -58,13 +62,12 @@ const navigation = [
         path: "/owner/tables",
       },
       {
-      label: "Order History",
-      icon: HistoryRounded,
-      path: "/owner/history",
-    },
+        label: "Order History",
+        icon: HistoryRounded,
+        path: "/owner/history",
+      },
     ],
   },
-
   {
     section: "FINANCE",
     items: [
@@ -85,7 +88,6 @@ const navigation = [
       },
     ],
   },
-
   {
     section: "CATALOG",
     items: [
@@ -108,191 +110,477 @@ const navigation = [
   },
 ];
 
+const SPRING = "420ms cubic-bezier(0.16, 1, 0.3, 1)";
 
 function OwnerSidebar() {
-   const merchant = useSelector(
-  (state) => state.merchant.merchant
-); 
+  const merchant = useSelector(
+    (state) => state.merchant?.merchant
+  );
 
- const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const dispatch = useDispatch();
-  return (
-    <Box
-      component="aside"
-      sx={{
-        width: 224,
-        height: "100vh",
-        flexShrink: 0,
-        display: { xs: "none", lg: "flex" },
-        flexDirection: "column",
 
-        background:
-          "linear-gradient(180deg, #201E1A 0%, #181714 100%)",
+  const [collapsed, setCollapsed] = useState(false);
 
-        color: "#fff",
+  // Collapsed mode never expands on hover.
+  const expanded = !collapsed;
 
-        borderRight: "1px solid rgba(255,255,255,0.055)",
-      }}
-    >
+  /* CTRL + B */
 
-      {/* =====================================================
-          INDEPENDENT SIDEBAR SCROLL
-          ===================================================== */}
+  useEffect(() => {
+    const handleKeyboard = (event) => {
+      if (
+        event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === "b"
+      ) {
+        const target = event.target;
 
-      <Box
+        const isTyping =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target?.isContentEditable;
+
+        if (isTyping) return;
+
+        event.preventDefault();
+        setCollapsed((current) => !current);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyboard);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyboard);
+    };
+  }, []);
+
+  /* LOGOUT */
+
+  const handleLogout = () => {
+    clearAuthSession();
+    dispatch(logout());
+
+    navigate("/", {
+      replace: true,
+    });
+  };
+
+  /* TOOLTIP: ONLY WHILE COLLAPSED */
+
+  const withTooltip = (label, child) => {
+    if (expanded) return child;
+
+    return (
+      <Tooltip
+        title={label}
+        placement="right"
+        arrow
+        enterDelay={180}
+        leaveDelay={0}
+      >
+        {child}
+      </Tooltip>
+    );
+  };
+
+  /* REUSABLE NAVIGATION BUTTON */
+
+  const renderNavigationButton = (item, isActive) => {
+    const Icon = item.icon;
+
+    return (
+      <ListItemButton
+        disableRipple
+        selected={isActive}
         sx={{
-          height: "100%",
-          minHeight: 0,
-          overflowY: "auto",
-          overflowX: "hidden",
+          position: "relative",
+          minHeight: expanded ? 38 : 34,
+          px: expanded ? 1.15 : 0,
+          py: expanded ? 0.45 : 0,
+          mb: expanded ? 0.3 : 0.18,
+          borderRadius: expanded ? "8px" : "10px",
+          justifyContent: expanded ? "flex-start" : "center",
 
-          "&::-webkit-scrollbar": {
-            width: 4,
+          color: isActive
+            ? "#F7F5F0"
+            : "rgba(255,255,255,0.58)",
+
+          backgroundColor: isActive
+            ? "rgba(230,162,60,0.105)"
+            : "transparent",
+
+          transition:
+            "background-color 180ms ease, color 180ms ease",
+
+          "&:hover": {
+            backgroundColor: isActive
+              ? "rgba(230,162,60,0.14)"
+              : "rgba(255,255,255,0.045)",
+            color: "#fff",
           },
 
-          "&::-webkit-scrollbar-track": {
-            background: "transparent",
+          "&.Mui-selected": {
+            backgroundColor: "rgba(230,162,60,0.105)",
           },
 
-          "&::-webkit-scrollbar-thumb": {
-            background: "rgba(255,255,255,0.12)",
-            borderRadius: 20,
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            left: 0,
+            top: expanded ? 8 : 6,
+            bottom: expanded ? 8 : 6,
+            width: isActive ? 2 : 0,
+            backgroundColor: "#E6A23C",
+            borderRadius: "0 3px 3px 0",
           },
-
-          scrollbarWidth: "thin",
-          scrollbarColor:
-            "rgba(255,255,255,0.12) transparent",
         }}
       >
-        {/* =====================================================
-            BRAND
-            ===================================================== */}
-
-        <Box
+        <ListItemIcon
           sx={{
-            px: 1.75,
-            pt: 1.75,
+            minWidth: expanded ? 31 : 0,
+            width: expanded ? "auto" : "100%",
+            justifyContent: expanded ? "flex-start" : "center",
+            color: isActive
+              ? "#E6A23C"
+              : "rgba(255,255,255,0.42)",
+            transition: "color 180ms ease",
           }}
         >
+          <Icon sx={{ fontSize: expanded ? 18 : 17 }} />
+        </ListItemIcon>
+
+        <ListItemText
+          primary={item.label}
+          sx={{
+            my: 0,
+            minWidth: 0,
+            overflow: "hidden",
+            opacity: expanded ? 1 : 0,
+            width: expanded ? "auto" : 0,
+            transform: expanded
+              ? "translate3d(0,0,0)"
+              : "translate3d(-6px,0,0)",
+            transition:
+              `opacity 160ms ease, transform ${SPRING}, width ${SPRING}`,
+          }}
+          slotProps={{
+            primary: {
+              sx: {
+                fontSize: 11.8,
+                fontWeight: isActive ? 650 : 500,
+                letterSpacing: "-0.005em",
+                whiteSpace: "nowrap",
+              },
+            },
+          }}
+        />
+
+        {item.badge && expanded && (
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 1.15,
-              px: 0.5,
-              pb: 1.6,
+              gap: 0.35,
+              ml: "auto",
+              px: 0.7,
+              py: 0.25,
+              borderRadius: "5px",
+              backgroundColor: "rgba(230,162,60,0.14)",
+              border: "1px solid rgba(230,162,60,0.18)",
             }}
           >
-            {/* Brand mark */}
-            <Box
+            <FiberManualRecordRounded
+              sx={{ fontSize: 6, color: "#E6A23C" }}
+            />
+            <Typography
               sx={{
-                width: 36,
-                height: 36,
-                borderRadius: "10px",
-
-                display: "grid",
-                placeItems: "center",
-
-                background:
-                  "linear-gradient(145deg, #F0B04D, #D88D22)",
-
-                color: "#211A11",
-
-                fontSize: 16,
-                fontWeight: 900,
-
-                boxShadow:
-                  "0 5px 18px rgba(230,162,60,0.16)",
+                fontSize: 9,
+                fontWeight: 750,
+                color: "#E6A23C",
+                lineHeight: 1,
               }}
             >
-              Q
-            </Box>
-
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                sx={{
-                  fontSize: 13.5,
-                  fontWeight: 800,
-                  letterSpacing: "-0.02em",
-                  lineHeight: 1.1,
-                }}
-              >
-                QRToken
-                <Box
-                  component="span"
-                  sx={{
-                    color: "#E6A23C",
-                  }}
-                >
-                  .in
-                </Box>
-              </Typography>
-
-              <Typography
-                sx={{
-                  mt: 0.35,
-                  fontSize: 9,
-                  fontWeight: 600,
-                  letterSpacing: "0.105em",
-                  textTransform: "uppercase",
-                  color: "rgba(255,255,255,0.36)",
-                }}
-              >
-                Merchant Console
-              </Typography>
-            </Box>
+              LIVE
+            </Typography>
           </Box>
+        )}
+      </ListItemButton>
+    );
+  };
 
-          <Divider
+  return (
+    <Box
+      component="aside"
+      sx={{
+        width: expanded ? 224 : 76,
+        height: "100vh",
+        flexShrink: 0,
+        display: { xs: "none", lg: "block" },
+        position: "relative",
+        zIndex: 1200,
+        background: "transparent",
+        transition: `width ${SPRING}`,
+      }}
+    >
+      {/* SIDEBAR SHELL */}
+
+      <Box
+        sx={{
+          position: "fixed",
+          left: expanded ? 0 : 12,
+          top: expanded ? 0 : "50%",
+          width: expanded ? 224 : 64,
+          height: expanded ? "100vh" : "fit-content",
+          maxHeight: expanded ? "100vh" : "calc(100vh - 24px)",
+          transform: expanded
+            ? "translate3d(0,0,0)"
+            : "translate3d(0,-50%,0)",
+          transformOrigin: "left center",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "visible",
+          borderRadius: expanded ? 0 : "20px",
+
+          background:
+            "linear-gradient(180deg, #201E1A 0%, #181714 100%)",
+
+          color: "#fff",
+
+          border: expanded
+            ? "1px solid rgba(255,255,255,0.055)"
+            : "1px solid rgba(255,255,255,0.08)",
+
+          boxShadow: expanded
+            ? "none"
+            : "0 14px 40px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.18)",
+
+          zIndex: 1200,
+          backfaceVisibility: "hidden",
+          transition:
+            `left ${SPRING}, top ${SPRING}, transform ${SPRING}, width ${SPRING}, height ${SPRING}, border-radius ${SPRING}, box-shadow 300ms ease`,
+        }}
+      >
+        {/* COLLAPSE / EXPAND BUTTON */}
+
+        {withTooltip(
+          expanded
+            ? "Collapse sidebar · Ctrl+B"
+            : "Expand sidebar · Ctrl+B",
+
+          <Box
+            component="button"
+            type="button"
+            onClick={() => setCollapsed((current) => !current)}
+            aria-label={
+              expanded ? "Collapse sidebar" : "Expand sidebar"
+            }
             sx={{
-              borderColor: "rgba(255,255,255,0.07)",
-            }}
-          />
-        </Box>
+              position: "absolute",
+              right: -13,
+              top: expanded ? 72 : "50%",
+              transform: expanded
+                ? "translate3d(0,0,0)"
+                : "translate3d(0,-50%,0)",
+              width: 27,
+              height: 48,
+              border: "1px solid rgba(255,255,255,0.10)",
+              borderRadius: "999px",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              color: "rgba(255,255,255,0.65)",
+              background: "rgba(38,35,30,0.96)",
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              boxShadow:
+                "0 7px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06)",
+              zIndex: 1500,
+              transition:
+                `top ${SPRING}, transform ${SPRING}, color 180ms ease, background-color 180ms ease, box-shadow 180ms ease`,
 
-        {/* =====================================================
-            NAVIGATION
-            ===================================================== */}
+              "&:hover": {
+                color: "#E6A23C",
+                background: "rgba(52,47,40,0.98)",
+                boxShadow:
+                  "0 9px 26px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.08)",
+              },
+
+              "&:active": {
+                scale: "0.96",
+              },
+            }}
+          >
+            {expanded ? (
+              <ChevronLeftRounded sx={{ fontSize: 19 }} />
+            ) : (
+              <ChevronRightRounded sx={{ fontSize: 19 }} />
+            )}
+          </Box>
+        )}
+
+        {/* SCROLL AREA */}
 
         <Box
-          component="nav"
           sx={{
-            px: 1.1,
-            py: 1.5,
+            height: expanded ? "100%" : "auto",
+            minHeight: expanded ? 0 : "auto",
+            overflowY: expanded ? "auto" : "visible",
+            overflowX: "hidden",
+            px: 0,
+
+            "&::-webkit-scrollbar": { width: 3 },
+            "&::-webkit-scrollbar-track": {
+              background: "transparent",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              background: "rgba(255,255,255,0.12)",
+              borderRadius: 20,
+            },
+
+            scrollbarWidth: "thin",
+            scrollbarColor:
+              "rgba(255,255,255,0.12) transparent",
           }}
         >
-          {navigation.map((group, groupIndex) => (
+          {/* BRAND */}
+
+          <Box
+            sx={{
+              px: expanded ? 1.75 : 0,
+              pt: expanded ? 1.75 : 0.9,
+              transition: `padding ${SPRING}`,
+            }}
+          >
             <Box
-              key={group.section}
               sx={{
-                mb:
-                  groupIndex === navigation.length - 1
-                    ? 0
-                    : 1.8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: expanded ? "flex-start" : "center",
+                gap: expanded ? 1.15 : 0,
+                px: expanded ? 0.5 : 0,
+                pb: expanded ? 1.6 : 0.8,
+                transition: `all ${SPRING}`,
               }}
             >
-              {/* Section title */}
-              <Typography
+              <Box
                 sx={{
-                  px: 1.15,
-                  mb: 0.65,
-
-                  fontSize: 9,
-                  fontWeight: 750,
-                  letterSpacing: "0.16em",
-
-                  color:
-                    "rgba(255,255,255,0.28)",
+                  width: expanded ? 36 : 34,
+                  height: expanded ? 36 : 34,
+                  flexShrink: 0,
+                  borderRadius: "10px",
+                  display: "grid",
+                  placeItems: "center",
+                  background:
+                    "linear-gradient(145deg, #F0B04D, #D88D22)",
+                  color: "#211A11",
+                  fontSize: expanded ? 16 : 15,
+                  fontWeight: 900,
+                  boxShadow:
+                    "0 5px 18px rgba(230,162,60,0.16)",
+                  transition: `width ${SPRING}, height ${SPRING}, font-size 220ms ease`,
                 }}
               >
-                {group.section}
-              </Typography>
+                Q
+              </Box>
 
-              <List disablePadding>
-                {group.items.map((item) => {
-                  const Icon = item.icon;
+              <Box
+                sx={{
+                  minWidth: 0,
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  opacity: expanded ? 1 : 0,
+                  transform: expanded
+                    ? "translate3d(0,0,0)"
+                    : "translate3d(-8px,0,0)",
+                  width: expanded ? "auto" : 0,
+                  transition:
+                    `opacity 160ms ease, transform ${SPRING}, width ${SPRING}`,
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 13.5,
+                    fontWeight: 800,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  QRToken
+                  <Box
+                    component="span"
+                    sx={{ color: "#E6A23C" }}
+                  >
+                    .in
+                  </Box>
+                </Typography>
 
-                  return (
+                <Typography
+                  sx={{
+                    mt: 0.35,
+                    fontSize: 9,
+                    fontWeight: 600,
+                    letterSpacing: "0.105em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.36)",
+                  }}
+                >
+                  Merchant Console
+                </Typography>
+              </Box>
+            </Box>
+
+            <Divider
+              sx={{
+                borderColor: "rgba(255,255,255,0.07)",
+                opacity: expanded ? 1 : 0,
+                transition: "opacity 180ms ease",
+              }}
+            />
+          </Box>
+
+          {/* NAVIGATION */}
+
+          <Box
+            component="nav"
+            sx={{
+              px: expanded ? 1.1 : 0.45,
+              py: expanded ? 1.5 : 0.75,
+              transition: `padding ${SPRING}`,
+            }}
+          >
+            {navigation.map((group, groupIndex) => (
+              <Box
+                key={group.section}
+                sx={{
+                  mb: expanded
+                    ? groupIndex === navigation.length - 1
+                      ? 0
+                      : 1.8
+                    : 0.5,
+                  transition: `margin ${SPRING}`,
+                }}
+              >
+                <Typography
+                  sx={{
+                    height: expanded ? "auto" : 0,
+                    overflow: "hidden",
+                    px: 1.15,
+                    mb: expanded ? 0.65 : 0,
+                    fontSize: 9,
+                    fontWeight: 750,
+                    letterSpacing: "0.16em",
+                    color: "rgba(255,255,255,0.28)",
+                    opacity: expanded ? 1 : 0,
+                    transition: "opacity 150ms ease",
+                  }}
+                >
+                  {group.section}
+                </Typography>
+
+                <List disablePadding>
+                  {group.items.map((item) => (
                     <NavLink
                       key={item.label}
                       to={item.path}
@@ -302,392 +590,283 @@ function OwnerSidebar() {
                         display: "block",
                       }}
                     >
-                      {({ isActive }) => (
-                        <ListItemButton
-                          disableRipple
-                          selected={isActive}
-                          sx={{
-                            position: "relative",
-
-                            minHeight: 38,
-
-                            px: 1.15,
-                            py: 0.45,
-                            mb: 0.3,
-
-                            borderRadius: "8px",
-
-                            color: isActive
-                              ? "#F7F5F0"
-                              : "rgba(255,255,255,0.58)",
-
-                            backgroundColor:
-                              isActive
-                                ? "rgba(230,162,60,0.105)"
-                                : "transparent",
-
-                            transition:
-                              "all 140ms ease",
-
-                            "&:hover": {
-                              backgroundColor:
-                                isActive
-                                  ? "rgba(230,162,60,0.13)"
-                                  : "rgba(255,255,255,0.045)",
-
-                              color: "#fff",
-                            },
-
-                            "&.Mui-selected": {
-                              backgroundColor:
-                                "rgba(230,162,60,0.105)",
-                            },
-
-                            "&.Mui-selected:hover": {
-                              backgroundColor:
-                                "rgba(230,162,60,0.14)",
-                            },
-
-                            // active indicator
-                            "&::before": {
-                              content: '""',
-
-                              position: "absolute",
-                              left: 0,
-                              top: 8,
-                              bottom: 8,
-
-                              width: isActive ? 2 : 0,
-
-                              backgroundColor:
-                                "#E6A23C",
-
-                              borderRadius:
-                                "0 3px 3px 0",
-
-                              transition:
-                                "width 140ms ease",
-                            },
-                          }}
-                        >
-                          <ListItemIcon
-                            sx={{
-                              minWidth: 31,
-
-                              color: isActive
-                                ? "#E6A23C"
-                                : "rgba(255,255,255,0.42)",
-
-                              transition:
-                                "color 140ms ease",
-                            }}
-                          >
-                            <Icon
-                              sx={{
-                                fontSize: 18,
-                              }}
-                            />
-                          </ListItemIcon>
-
-                          <ListItemText
-                            primary={item.label}
-                            sx={{
-                              my: 0,
-                            }}
-                            primaryTypographyProps={{
-                              fontSize: 11.8,
-                              fontWeight: isActive
-                                ? 650
-                                : 500,
-                              letterSpacing:
-                                "-0.005em",
-                              noWrap: true,
-                            }}
-                          />
-
-                          {item.badge && (
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 0.35,
-
-                                px: 0.7,
-                                py: 0.25,
-
-                                borderRadius: "5px",
-
-                                backgroundColor:
-                                  "rgba(230,162,60,0.14)",
-
-                                border:
-                                  "1px solid rgba(230,162,60,0.18)",
-                              }}
-                            >
-                              <FiberManualRecordRounded
-                                sx={{
-                                  fontSize: 6,
-                                  color: "#E6A23C",
-                                }}
-                              />
-
-                              <Typography
-                                sx={{
-                                  fontSize: 9,
-                                  fontWeight: 750,
-                                  color: "#E6A23C",
-                                  lineHeight: 1,
-                                }}
-                              >
-                                LIVE
-                              </Typography>
-                            </Box>
-                          )}
-                        </ListItemButton>
-                      )}
+                      {({ isActive }) =>
+                        withTooltip(
+                          item.label,
+                          renderNavigationButton(item, isActive)
+                        )
+                      }
                     </NavLink>
-                  );
-                })}
-              </List>
-            </Box>
-          ))}
+                  ))}
+                </List>
+              </Box>
+            ))}
 
-          {/* =================================================
-              SETTINGS — separated from catalog
-              ================================================= */}
+            {/* SETTINGS */}
 
-          <Divider
+            <Divider
+              sx={{
+                my: expanded ? 1.25 : 0.65,
+                mx: expanded ? 0.75 : 0.25,
+                borderColor: "rgba(255,255,255,0.065)",
+                opacity: expanded ? 1 : 0.8,
+                transition: `margin ${SPRING}, opacity 180ms ease`,
+              }}
+            />
+
+            <NavLink
+              to="/owner/settings"
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+                display: "block",
+              }}
+            >
+              {({ isActive }) =>
+                withTooltip(
+                  "Settings",
+                  <ListItemButton
+                    disableRipple
+                    selected={isActive}
+                    sx={{
+                      minHeight: expanded ? 38 : 34,
+                      px: expanded ? 1.15 : 0,
+                      py: expanded ? 0.45 : 0,
+                      borderRadius: expanded ? "8px" : "10px",
+                      justifyContent: expanded
+                        ? "flex-start"
+                        : "center",
+                      color: isActive
+                        ? "#fff"
+                        : "rgba(255,255,255,0.55)",
+                      backgroundColor: isActive
+                        ? "rgba(230,162,60,0.105)"
+                        : "transparent",
+                      transition:
+                        "background-color 180ms ease, color 180ms ease",
+
+                      "&:hover": {
+                        backgroundColor:
+                          "rgba(255,255,255,0.045)",
+                        color: "#fff",
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: expanded ? 31 : 0,
+                        width: expanded ? "auto" : "100%",
+                        justifyContent: expanded
+                          ? "flex-start"
+                          : "center",
+                        color: isActive
+                          ? "#E6A23C"
+                          : "rgba(255,255,255,0.42)",
+                      }}
+                    >
+                      <SettingsRounded
+                        sx={{ fontSize: expanded ? 18 : 17 }}
+                      />
+                    </ListItemIcon>
+
+                    <ListItemText
+                      primary="Settings"
+                      sx={{
+                        my: 0,
+                        overflow: "hidden",
+                        opacity: expanded ? 1 : 0,
+                        width: expanded ? "auto" : 0,
+                        transform: expanded
+                          ? "translate3d(0,0,0)"
+                          : "translate3d(-6px,0,0)",
+                        transition:
+                          `opacity 160ms ease, transform ${SPRING}, width ${SPRING}`,
+                      }}
+                      slotProps={{
+                        primary: {
+                          sx: {
+                            fontSize: 11.8,
+                            fontWeight: isActive ? 650 : 500,
+                            whiteSpace: "nowrap",
+                          },
+                        },
+                      }}
+                    />
+                  </ListItemButton>
+                )
+              }
+            </NavLink>
+          </Box>
+
+          {/* FLEX SPACE */}
+
+          {expanded && (
+            <Box sx={{ minHeight: 20, flex: 1 }} />
+          )}
+
+          {/* MERCHANT CARD */}
+
+          <Box
             sx={{
-              my: 1.25,
-              mx: 0.75,
-              borderColor:
-                "rgba(255,255,255,0.065)",
-            }}
-          />
-
-          <NavLink
-            to="/owner/settings"
-            style={{
-              textDecoration: "none",
-              color: "inherit",
-              display: "block",
+              mx: expanded ? 1.1 : 0.45,
+              mb: expanded ? 0.8 : 0.45,
+              p: expanded ? 1.15 : 0.5,
+              borderRadius: expanded ? "11px" : "10px",
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025))",
+              border: "1px solid rgba(255,255,255,0.065)",
+              transition: `all ${SPRING}`,
             }}
           >
-            {({ isActive }) => (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: expanded ? "flex-start" : "center",
+                gap: expanded ? 1 : 0,
+              }}
+            >
+              <Box sx={{ position: "relative", flexShrink: 0 }}>
+                <Avatar
+                  sx={{
+                    width: expanded ? 32 : 30,
+                    height: expanded ? 32 : 30,
+                    bgcolor: "#E6A23C",
+                    color: "#241B10",
+                    fontSize: 10,
+                    fontWeight: 850,
+                    transition: `width ${SPRING}, height ${SPRING}`,
+                  }}
+                >
+                  SK
+                </Avatar>
+
+                <Box
+                  sx={{
+                    position: "absolute",
+                    right: -1,
+                    bottom: -1,
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    backgroundColor: "#46B980",
+                    border: "2px solid #201E1A",
+                  }}
+                />
+              </Box>
+
+              <Box
+                sx={{
+                  minWidth: 0,
+                  overflow: "hidden",
+                  opacity: expanded ? 1 : 0,
+                  width: expanded ? "auto" : 0,
+                  transform: expanded
+                    ? "translate3d(0,0,0)"
+                    : "translate3d(-6px,0,0)",
+                  transition:
+                    `opacity 160ms ease, transform ${SPRING}, width ${SPRING}`,
+                }}
+              >
+                <Typography
+                  noWrap
+                  sx={{
+                    fontSize: 10.8,
+                    fontWeight: 650,
+                    color: "#F4F2ED",
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {merchant?.name}
+                </Typography>
+
+                <Typography
+                  noWrap
+                  sx={{
+                    mt: 0.25,
+                    fontSize: 9.5,
+                    color: "rgba(255,255,255,0.35)",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {merchant?.city} · {merchant?.plan}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* LOGOUT */}
+
+          <Box
+            sx={{
+              px: expanded ? 1.1 : 0.45,
+              pb: expanded ? 1.5 : 0,
+            }}
+          >
+            {withTooltip(
+              "Logout",
               <ListItemButton
                 disableRipple
-                selected={isActive}
+                onClick={handleLogout}
                 sx={{
-                  minHeight: 38,
-
-                  px: 1.15,
-                  py: 0.45,
-
-                  borderRadius: "8px",
-
-                  color: isActive
-                    ? "#fff"
-                    : "rgba(255,255,255,0.55)",
-
-                  backgroundColor: isActive
-                    ? "rgba(230,162,60,0.105)"
-                    : "transparent",
+                  minHeight: expanded ? 37 : 34,
+                  px: expanded ? 1.15 : 0,
+                  borderRadius: expanded ? "8px" : "10px",
+                  justifyContent: expanded
+                    ? "flex-start"
+                    : "center",
+                  color: "rgba(255,255,255,0.38)",
+                  transition:
+                    "background-color 180ms ease, color 180ms ease",
 
                   "&:hover": {
                     backgroundColor:
                       "rgba(255,255,255,0.045)",
-                    color: "#fff",
-                  },
-
-                  "&.Mui-selected": {
-                    backgroundColor:
-                      "rgba(230,162,60,0.105)",
+                    color: "#E6A23C",
                   },
                 }}
               >
                 <ListItemIcon
                   sx={{
-                    minWidth: 31,
-                    color: isActive
-                      ? "#E6A23C"
-                      : "rgba(255,255,255,0.42)",
+                    minWidth: expanded ? 31 : 0,
+                    width: expanded ? "auto" : "100%",
+                    justifyContent: expanded
+                      ? "flex-start"
+                      : "center",
+                    color: "inherit",
                   }}
                 >
-                  <SettingsRounded
-                    sx={{ fontSize: 18 }}
+                  <LogoutRounded
+                    sx={{ fontSize: expanded ? 18 : 17 }}
                   />
                 </ListItemIcon>
 
                 <ListItemText
-                  primary="Settings"
-                  sx={{ my: 0 }}
-                  primaryTypographyProps={{
-                    fontSize: 11.8,
-                    fontWeight: isActive
-                      ? 650
-                      : 500,
+                  primary="Logout"
+                  sx={{
+                    my: 0,
+                    overflow: "hidden",
+                    opacity: expanded ? 1 : 0,
+                    width: expanded ? "auto" : 0,
+                    transform: expanded
+                      ? "translate3d(0,0,0)"
+                      : "translate3d(-6px,0,0)",
+                    transition:
+                      `opacity 160ms ease, transform ${SPRING}, width ${SPRING}`,
+                  }}
+                  slotProps={{
+                    primary: {
+                      sx: {
+                        fontSize: 11.8,
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
+                      },
+                    },
                   }}
                 />
               </ListItemButton>
             )}
-          </NavLink>
-        </Box>
-
-        {/* =====================================================
-            FLEX SPACE
-            ===================================================== */}
-
-        <Box sx={{ minHeight: 20 }} />
-
-        {/* =====================================================
-            MERCHANT CARD
-            ===================================================== */}
-
-        <Box
-          sx={{
-            mx: 1.1,
-            mb: 0.8,
-            p: 1.15,
-
-            borderRadius: "11px",
-
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025))",
-
-            border:
-              "1px solid rgba(255,255,255,0.065)",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-            }}
-          >
-            <Box sx={{ position: "relative" }}>
-              <Avatar
-                sx={{
-                  width: 32,
-                  height: 32,
-
-                  bgcolor: "#E6A23C",
-                  color: "#241B10",
-
-                  fontSize: 10,
-                  fontWeight: 850,
-                }}
-              >
-                SK
-              </Avatar>
-
-              {/* Online dot */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  right: -1,
-                  bottom: -1,
-
-                  width: 9,
-                  height: 9,
-
-                  borderRadius: "50%",
-
-                  backgroundColor: "#46B980",
-
-                  border:
-                    "2px solid #201E1A",
-                }}
-              />
-            </Box>
-
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                noWrap
-                sx={{
-                  fontSize: 10.8,
-                  fontWeight: 650,
-                  color: "#F4F2ED",
-                  lineHeight: 1.25,
-                }}
-              >
-               {merchant?.name}
-              </Typography>
-
-              <Typography
-                noWrap
-                sx={{
-                  mt: 0.25,
-                  fontSize: 9.5,
-                  color:
-                    "rgba(255,255,255,0.35)",
-                  lineHeight: 1.2,
-                }}
-              >
-                 {merchant?.city} ·{merchant?.plan}
-              </Typography>
-            </Box>
           </Box>
-        </Box>
-
-        {/* =====================================================
-            LOGOUT
-            ===================================================== */}
-
-        <Box
-          sx={{
-            px: 1.1,
-            pb: 1.5,
-          }}
-        >
-          <ListItemButton
-            disableRipple
-          onClick={() => {
-  clearAuthSession();
-
-  dispatch(logout());
-
-  navigate("/", {
-    replace: true,
-  });
-}}
-            sx={{
-              minHeight: 37,
-
-              px: 1.15,
-
-              borderRadius: "8px",
-
-              color:
-                "rgba(255,255,255,0.38)",
-
-              "&:hover": {
-                backgroundColor:
-                  "rgba(255,255,255,0.045)",
-                color: "#E6A23C",
-              },
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                minWidth: 31,
-                color: "inherit",
-              }}
-            >
-              <LogoutRounded
-                sx={{ fontSize: 18 }}
-              />
-            </ListItemIcon>
-
-            <ListItemText
-              primary="Logout"
-              sx={{ my: 0 }}
-              primaryTypographyProps={{
-                fontSize: 11.8,
-                fontWeight: 500,
-              }}
-            />
-          </ListItemButton>
         </Box>
       </Box>
     </Box>

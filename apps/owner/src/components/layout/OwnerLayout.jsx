@@ -8,9 +8,10 @@ import { fetchMerchantProfile } from "../../redux/thunks/merchantThunks";
 
 function OwnerLayout() {
   const dispatch = useDispatch();
+
   useEffect(() => {
-  dispatch(fetchMerchantProfile());
-}, [dispatch]);
+    dispatch(fetchMerchantProfile());
+  }, [dispatch]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F7F3ED]">
