@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+  import socket from "../socket/socket";
 
 import {
   fetchMerchantOrders,
@@ -180,22 +181,43 @@ function LiveOrdersPage() {
   /* =======================================================
      FETCH ORDERS
   ======================================================= */
+useEffect(() => {
+  if (!merchant?._id) return;
 
-  useEffect(() => {
-    if (!merchant?._id) return;
+  // Initial REST load
+  dispatch(fetchMerchantOrders());
 
-    // Fetch immediately when page opens
+  // Join the documented merchant room
+  socket.emit("join-merchant", merchant._id);
+
+  const handleNewOrder = (order) => {
+    console.log(
+      "New Order Received:",
+      order?.tokenNumber
+    );
+
     dispatch(fetchMerchantOrders());
+  };
 
-    // Keep checking for new / updated orders
-    const interval = setInterval(() => {
-      dispatch(fetchMerchantOrders());
-    }, 5000);
+  const handleOrderUpdated = (order) => {
+    console.log(
+      "Order Updated:",
+      order?.tokenNumber,
+      "→",
+      order?.status
+    );
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [dispatch, merchant?._id]);
+    dispatch(fetchMerchantOrders());
+  };
+
+  socket.on("new-order", handleNewOrder);
+  socket.on("order-updated", handleOrderUpdated);
+
+  return () => {
+    socket.off("new-order", handleNewOrder);
+    socket.off("order-updated", handleOrderUpdated);
+  };
+}, [dispatch, merchant?._id]);
 
 
   /* =======================================================

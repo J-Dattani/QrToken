@@ -22,7 +22,7 @@ import {
   useMemo,
   useState,
 } from "react";
-
+import socket from "../socket/socket";
 import {
   useDispatch,
   useSelector,
@@ -255,29 +255,71 @@ function KitchenQueuePage() {
      Updated orders automatically refresh.
   ======================================================= */
 
-  useEffect(() => {
-    if (!merchant?._id) {
-      return;
-    }
+useEffect(() => {
+  if (!merchant?._id) {
+    return;
+  }
+
+  // Initial REST load
+  dispatch(
+    fetchMerchantOrders()
+  );
+
+  // Join the documented merchant room
+  socket.emit(
+    "join-merchant",
+    merchant._id
+  );
+
+  const handleNewOrder = (order) => {
+    console.log(
+      "Kitchen New Order:",
+      order?.tokenNumber
+    );
 
     dispatch(
       fetchMerchantOrders()
     );
+  };
 
-    const interval =
-      setInterval(() => {
-        dispatch(
-          fetchMerchantOrders()
-        );
-      }, 5000);
+  const handleOrderUpdated = (order) => {
+    console.log(
+      "Kitchen Order Updated:",
+      order?.tokenNumber,
+      "→",
+      order?.status
+    );
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [
-    dispatch,
-    merchant?._id,
-  ]);
+    dispatch(
+      fetchMerchantOrders()
+    );
+  };
+
+  socket.on(
+    "new-order",
+    handleNewOrder
+  );
+
+  socket.on(
+    "order-updated",
+    handleOrderUpdated
+  );
+
+  return () => {
+    socket.off(
+      "new-order",
+      handleNewOrder
+    );
+
+    socket.off(
+      "order-updated",
+      handleOrderUpdated
+    );
+  };
+}, [
+  dispatch,
+  merchant?._id,
+]);
 
 
   /* =======================================================

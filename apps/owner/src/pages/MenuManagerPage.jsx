@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { apiRequest } from "../api/client";
+import socket from "../socket/socket";
 
 const FALLBACK_CATEGORIES = [
   "Tea & Coffee",
@@ -80,19 +81,26 @@ function normalizeMenuItem(item) {
     price: Number(item?.price || 0),
     category: String(item?.category || "Uncategorized").trim(),
 
-    // -1 = unlimited, otherwise actual quantity
+    // Backend contract:
+    // -1 = unlimited
+    // otherwise = actual quantity
     stock: Number(item?.stock ?? 0),
+
+    unlimited:
+      Number(item?.stock) === -1 ||
+      item?.unlimited === true ||
+      item?.stock == null,
 
     vegetarian: Boolean(
       item?.isVeg ??
-      item?.vegetarian ??
-      true
+        item?.vegetarian ??
+        true
     ),
 
     active: Boolean(
       item?.isAvailable ??
-      item?.active ??
-      false
+        item?.active ??
+        false
     ),
 
     image: item?.image || "",
@@ -143,50 +151,69 @@ function MenuManagerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] =
+    useState("All");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [showOnlyActive, setShowOnlyActive] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState("");
+  const [editingItem, setEditingItem] =
+    useState(null);
+  const [showOnlyActive, setShowOnlyActive] =
+    useState(false);
+  const [actionLoadingId, setActionLoadingId] =
+    useState("");
   const [toast, setToast] = useState({
     open: false,
     type: "success",
     message: "",
   });
+
   const toastTimerRef = useRef(null);
 
-  const showToast = useCallback((message, type = "success") => {
-    if (toastTimerRef.current) {
-      window.clearTimeout(toastTimerRef.current);
-    }
+  const showToast = useCallback(
+    (message, type = "success") => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(
+          toastTimerRef.current
+        );
+      }
 
-    setToast({
-      open: true,
-      type,
-      message,
-    });
-
-    toastTimerRef.current = window.setTimeout(() => {
       setToast({
-        open: false,
-        type: "success",
-        message: "",
+        open: true,
+        type,
+        message,
       });
-    }, 3000);
-  }, []);
+
+      toastTimerRef.current =
+        window.setTimeout(() => {
+          setToast({
+            open: false,
+            type: "success",
+            message: "",
+          });
+        }, 3000);
+    },
+    []
+  );
 
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) {
-        window.clearTimeout(toastTimerRef.current);
+        window.clearTimeout(
+          toastTimerRef.current
+        );
       }
     };
   }, []);
 
+  /* ==========================================================
+     LOAD MENU
+  ========================================================== */
+
   const loadItems = useCallback(async () => {
     if (!merchantId) {
       setItems([]);
-      setError("Merchant information is not available.");
+      setError(
+        "Merchant information is not available."
+      );
       return;
     }
 
@@ -203,7 +230,9 @@ function MenuManagerPage() {
 
       console.log("OWNER MENU:", response);
 
-      setItems(extractMenuItems(response));
+      setItems(
+        extractMenuItems(response)
+      );
     } catch (requestError) {
       console.error(
         "Failed to load owner menu:",
@@ -211,6 +240,7 @@ function MenuManagerPage() {
       );
 
       setItems([]);
+
       setError(
         requestError?.message ||
           "Unable to load menu items."
@@ -220,24 +250,81 @@ function MenuManagerPage() {
     }
   }, [merchantId]);
 
-  /*
-   * The delayed callback keeps the initial API/state update outside
-   * the synchronous body of the effect and avoids the React
-   * set-state-in-effect warning used by the current project setup.
-   */
+  /* ==========================================================
+     INITIAL MENU LOAD
+  ========================================================== */
+
+  useEffect(() => {
+    if (!merchantId) {
+      return;
+    }
+
+    loadItems();
+  }, [merchantId, loadItems]);
+
+  /* ==========================================================
+     WEBSOCKET
+     Merchant menu realtime updates
+  ========================================================== */
+
   useEffect(() => {
     if (!merchantId) {
       return undefined;
     }
 
-    const timer = window.setTimeout(() => {
-      loadItems();
-    }, 0);
+    // Join merchant room
+    socket.emit(
+      "join-merchant",
+      merchantId
+    );
+
+    const handleItemSoldOut = ({
+      itemId,
+      name,
+    }) => {
+      console.log(
+        "⚠️ Item Sold Out:",
+        name,
+        "(ID:",
+        itemId,
+        ")"
+      );
+
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                active: false,
+                stock: 0,
+                unlimited: false,
+              }
+            : item
+        )
+      );
+
+      showToast(
+        `${name || "Menu item"} is now SOLD OUT!`,
+        "error"
+      );
+    };
+
+    socket.on(
+      "item-sold-out",
+      handleItemSoldOut
+    );
 
     return () => {
-      window.clearTimeout(timer);
+      socket.off(
+        "item-sold-out",
+        handleItemSoldOut
+      );
     };
-  }, [merchantId, loadItems]);
+  }, [merchantId, showToast]);
+
+  /* ==========================================================
+     CATEGORIES
+  ========================================================== */
 
   const categories = useMemo(() => {
     const found = new Set(
@@ -246,34 +333,55 @@ function MenuManagerPage() {
         .filter(Boolean)
     );
 
-    const ordered = FALLBACK_CATEGORIES.filter(
-      (category) => found.has(category)
-    );
+    const ordered =
+      FALLBACK_CATEGORIES.filter(
+        (category) =>
+          found.has(category)
+      );
 
     const custom = [...found].filter(
       (category) =>
-        !FALLBACK_CATEGORIES.includes(category)
+        !FALLBACK_CATEGORIES.includes(
+          category
+        )
     );
 
-    return ["All", ...ordered, ...custom];
+    return [
+      "All",
+      ...ordered,
+      ...custom,
+    ];
   }, [items]);
 
+  /* ==========================================================
+     FILTERED ITEMS
+  ========================================================== */
+
   const filteredItems = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query =
+      search.trim().toLowerCase();
 
     return items.filter((item) => {
       const matchesSearch =
         !query ||
-        item.name.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query);
+        item.name
+          .toLowerCase()
+          .includes(query) ||
+        item.description
+          .toLowerCase()
+          .includes(query) ||
+        item.category
+          .toLowerCase()
+          .includes(query);
 
       const matchesCategory =
         selectedCategory === "All" ||
-        item.category === selectedCategory;
+        item.category ===
+          selectedCategory;
 
       const matchesActive =
-        !showOnlyActive || item.active;
+        !showOnlyActive ||
+        item.active;
 
       return (
         matchesSearch &&
@@ -287,6 +395,10 @@ function MenuManagerPage() {
     selectedCategory,
     showOnlyActive,
   ]);
+
+  /* ==========================================================
+     STATS
+  ========================================================== */
 
   const activeItems = items.filter(
     (item) => item.active
@@ -308,6 +420,10 @@ function MenuManagerPage() {
     0
   );
 
+  /* ==========================================================
+     MODAL
+  ========================================================== */
+
   const openAddModal = () => {
     setEditingItem(null);
     setModalOpen(true);
@@ -325,7 +441,8 @@ function MenuManagerPage() {
 
   /* ==========================================================
      MENU CRUD
-     Supplied backend contract:
+
+     Backend:
        GET    /menu/owner/:merchantId
        POST   /menu/owner/:merchantId
        PUT    /menu/item/:itemId
@@ -334,7 +451,9 @@ function MenuManagerPage() {
 
   const saveItem = async (itemData) => {
     if (!merchantId) {
-      window.alert("Merchant information is not available.");
+      window.alert(
+        "Merchant information is not available."
+      );
       return;
     }
 
@@ -343,9 +462,15 @@ function MenuManagerPage() {
       description: itemData.description,
       price: Number(itemData.price),
       category: itemData.category,
-      isVeg: Boolean(itemData.vegetarian),
-      isAvailable: Boolean(itemData.active),
-      stock: Number(itemData.stock || 0),
+      isVeg: Boolean(
+        itemData.vegetarian
+      ),
+      isAvailable: Boolean(
+        itemData.active
+      ),
+      stock: Number(
+        itemData.stock || 0
+      ),
       image: itemData.image || "",
     };
 
@@ -353,16 +478,21 @@ function MenuManagerPage() {
       setError("");
 
       if (editingItem?.id) {
-        setActionLoadingId(editingItem.id);
+        setActionLoadingId(
+          editingItem.id
+        );
 
         await apiRequest(
           `/menu/item/${editingItem.id}`,
           {
             method: "PUT",
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type":
+                "application/json",
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(
+              payload
+            ),
           }
         );
       } else {
@@ -373,15 +503,20 @@ function MenuManagerPage() {
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type":
+                "application/json",
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(
+              payload
+            ),
           }
         );
       }
 
       closeModal();
+
       await loadItems();
+
       showToast(
         editingItem?.id
           ? "Menu item updated successfully."
@@ -402,11 +537,18 @@ function MenuManagerPage() {
           : "Unable to add menu item.");
 
       setError(message);
-      showToast(message, "error");
+      showToast(
+        message,
+        "error"
+      );
     } finally {
       setActionLoadingId("");
     }
   };
+
+  /* ==========================================================
+     DELETE
+  ========================================================== */
 
   const deleteItem = async (itemId) => {
     if (!itemId) {
@@ -414,12 +556,17 @@ function MenuManagerPage() {
     }
 
     const item = items.find(
-      (menuItem) => menuItem.id === itemId
+      (menuItem) =>
+        menuItem.id === itemId
     );
 
-    const confirmed = window.confirm(
-      `Delete ${item?.name || "this menu item"}? This action cannot be undone.`
-    );
+    const confirmed =
+      window.confirm(
+        `Delete ${
+          item?.name ||
+          "this menu item"
+        }? This action cannot be undone.`
+      );
 
     if (!confirmed) {
       return;
@@ -437,7 +584,10 @@ function MenuManagerPage() {
       );
 
       await loadItems();
-      showToast("Menu item deleted successfully.");
+
+      showToast(
+        "Menu item deleted successfully."
+      );
     } catch (requestError) {
       console.error(
         "Failed to delete menu item:",
@@ -449,11 +599,18 @@ function MenuManagerPage() {
         "Unable to delete menu item.";
 
       setError(message);
-      showToast(message, "error");
+      showToast(
+        message,
+        "error"
+      );
     } finally {
       setActionLoadingId("");
     }
   };
+
+  /* ==========================================================
+     TOGGLE AVAILABILITY
+  ========================================================== */
 
   const toggleActive = async (itemId) => {
     if (!itemId) {
@@ -461,23 +618,29 @@ function MenuManagerPage() {
     }
 
     const item = items.find(
-      (menuItem) => menuItem.id === itemId
+      (menuItem) =>
+        menuItem.id === itemId
     );
 
     if (!item) {
       return;
     }
 
-    const nextActive = !item.active;
+    const nextActive =
+      !item.active;
 
     const payload = {
       name: item.name,
       description: item.description,
       price: Number(item.price),
       category: item.category,
-      isVeg: Boolean(item.vegetarian),
+      isVeg: Boolean(
+        item.vegetarian
+      ),
       isAvailable: nextActive,
-      stock: Number(item.stock || 0),
+      stock: Number(
+        item.stock || 0
+      ),
       image: item.image || "",
     };
 
@@ -490,13 +653,17 @@ function MenuManagerPage() {
         {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(
+            payload
+          ),
         }
       );
 
       await loadItems();
+
       showToast(
         nextActive
           ? "Item is now available to customers."
@@ -513,7 +680,11 @@ function MenuManagerPage() {
         "Unable to update item availability.";
 
       setError(message);
-      showToast(message, "error");
+
+      showToast(
+        message,
+        "error"
+      );
     } finally {
       setActionLoadingId("");
     }
@@ -527,6 +698,7 @@ function MenuManagerPage() {
             opacity: 0;
             transform: translate3d(18px, 8px, 0);
           }
+
           to {
             opacity: 1;
             transform: translate3d(0, 0, 0);
@@ -536,404 +708,652 @@ function MenuManagerPage() {
 
       <div className="min-h-full bg-[#F7F3ED] px-5 py-5 lg:px-7">
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-[#292621] text-[#E6A23C] shadow-[0_4px_12px_rgba(41,38,33,0.10)]">
-            <UtensilsCrossed size={17} strokeWidth={2} />
-          </div>
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="truncate text-[19px] font-bold tracking-[-0.03em] text-[#29251F]">
-                Menu
-              </h1>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
 
-              <span className="rounded-full bg-[#E8F5F0] px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#237762]">
-                {loading ? "..." : `${activeItems.length} live`}
-              </span>
-            </div>
+          <div className="flex min-w-0 items-center gap-3">
 
-            <p className="mt-0.5 truncate text-[11px] text-[#81766B]">
-              Control what customers can order
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={loadItems}
-            disabled={loading || !merchantId}
-            title="Refresh menu"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#DDD2C6] bg-white text-[#655C53] shadow-sm transition hover:bg-[#FCF8F2] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw
-              size={13}
-              className={loading ? "animate-spin" : ""}
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={openAddModal}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#292621] px-3.5 text-[11px] font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#1E1C19] hover:shadow-md active:scale-[0.98]"
-          >
-            <Plus size={14} />
-            Add item
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[#E7C1BC] bg-[#FFF2F0] px-3.5 py-2.5 text-[10px] font-semibold text-[#B44842]">
-          <div className="flex min-w-0 items-center gap-2">
-            <AlertTriangle size={13} className="shrink-0" />
-            <span className="truncate">{error}</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={loadItems}
-            className="shrink-0 rounded-md bg-white px-2 py-1 text-[9px] font-bold text-[#7A403C] shadow-sm"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MiniStat
-          icon={UtensilsCrossed}
-          label="Menu items"
-          value={loading ? "..." : items.length}
-          sub={`${activeItems.length} available`}
-          iconClass="bg-[#F4E7D1] text-[#C67B16]"
-        />
-
-        <MiniStat
-          icon={Boxes}
-          label="Low stock"
-          value={loading ? "..." : lowStockItems.length}
-          sub={
-            lowStockItems.length
-              ? "Needs attention"
-              : "Everything healthy"
-          }
-          iconClass={
-            lowStockItems.length
-              ? "bg-[#FFF0D7] text-[#D58914]"
-              : "bg-[#E5F4EE] text-[#23836D]"
-          }
-        />
-
-        <MiniStat
-          icon={Eye}
-          label="Customer visible"
-          value={loading ? "..." : activeItems.length}
-          sub={`of ${items.length} items`}
-          iconClass="bg-[#E7F4EF] text-[#24856E]"
-        />
-
-        <MiniStat
-          icon={CircleDollarSign}
-          label="Stock value"
-          value={loading ? "..." : `₹${totalValue.toLocaleString("en-IN")}`}
-          sub="Current inventory"
-          iconClass="bg-[#EEE9E2] text-[#5D554D]"
-        />
-      </div>
-
-      <div className="mb-3 flex flex-col gap-2.5 lg:flex-row">
-        <div className="relative flex-1">
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9A8F84]"
-          />
-
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search items, categories..."
-            className="h-10.5 w-full rounded-[10px] border border-[#DDD2C6] bg-white pl-9 pr-3 text-[12px] text-[#29251F] outline-none transition placeholder:text-[#A59A8E] focus:border-[#D89A3D] focus:ring-2 focus:ring-[#E6A23C]/10"
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowOnlyActive((current) => !current)}
-          className={`inline-flex h-10.5 items-center justify-center gap-1.5 rounded-[10px] border px-3.5 text-[11px] font-semibold transition ${
-            showOnlyActive
-              ? "border-[#292621] bg-[#292621] text-white"
-              : "border-[#DDD2C6] bg-white text-[#5E554C] hover:bg-[#FCF8F2]"
-          }`}
-        >
-          {showOnlyActive ? <Eye size={14} /> : <EyeOff size={14} />}
-          {showOnlyActive ? "Available only" : "All availability"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSelectedCategory("All")}
-          className="inline-flex h-10.5 items-center justify-center gap-1.5 rounded-[10px] border border-[#DDD2C6] bg-white px-3.5 text-[11px] font-semibold text-[#5E554C] transition hover:bg-[#FCF8F2]"
-        >
-          <SlidersHorizontal size={14} />
-          Reset category
-        </button>
-      </div>
-
-      <div className="mb-4 overflow-x-auto pb-1">
-        <div className="flex min-w-max gap-1.5">
-          {categories.map((category) => {
-            const count =
-              category === "All"
-                ? items.length
-                : items.filter(
-                    (item) => item.category === category
-                  ).length;
-
-            const selected =
-              selectedCategory === category;
-
-            return (
-              <button
-                key={category}
-                type="button"
-                onClick={() => setSelectedCategory(category)}
-                className={`group inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
-                  selected
-                    ? "border-[#292621] bg-[#292621] text-white shadow-sm"
-                    : "border-[#DDD2C6] bg-white text-[#6D6257] hover:border-[#CFC1B2] hover:bg-[#FCF8F2]"
-                }`}
-              >
-                {category}
-
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                    selected
-                      ? "bg-white/10 text-[#F0B348]"
-                      : "bg-[#F3EEE8] text-[#8B7F73]"
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="min-w-0">
-          {loading && items.length === 0 ? (
-            <MenuLoading />
-          ) : filteredItems.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-              {filteredItems.map((item) => (
-                <MenuCard
-                  key={item.id}
-                  item={item}
-                  onEdit={() => openEditModal(item)}
-                  onDelete={() => deleteItem(item.id)}
-                  onToggle={() => toggleActive(item.id)}
-                  actionLoading={actionLoadingId === item.id}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyMenu
-              search={search || selectedCategory !== "All"}
-              onAdd={openAddModal}
-            />
-          )}
-        </div>
-
-        <aside className="h-fit overflow-hidden rounded-[16px] bg-[#292621] text-white shadow-[0_10px_28px_rgba(31,27,22,0.13)]">
-          <div className="border-b border-white/[0.08] px-4 py-3.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E6A23C] text-[#292015]">
-                  <Sparkles size={14} />
-                </div>
-
-                <div>
-                  <h2 className="text-[12px] font-bold">
-                    Menu pulse
-                  </h2>
-                  <p className="mt-0.5 text-[9px] text-[#AFA69C]">
-                    Live backend menu
-                  </p>
-                </div>
-              </div>
-
-              <ArrowUpRight
-                size={14}
-                className="text-[#E6A23C]"
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-[#292621] text-[#E6A23C] shadow-[0_4px_12px_rgba(41,38,33,0.10)]">
+              <UtensilsCrossed
+                size={17}
+                strokeWidth={2}
               />
             </div>
-          </div>
 
-          <div className="p-3">
-            <div
-              className={`rounded-[12px] border p-3 ${
-                lowStockItems.length
-                  ? "border-[#6D512A] bg-[#352C20]"
-                  : "border-white/10 bg-white/[0.03]"
-              }`}
-            >
-              <div className="flex items-start gap-2.5">
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                    lowStockItems.length
-                      ? "bg-[#F5B447] text-[#382610]"
-                      : "bg-[#214D43] text-[#55D0B0]"
-                  }`}
-                >
-                  {lowStockItems.length ? (
-                    <AlertTriangle size={15} />
-                  ) : (
-                    <Check size={15} />
-                  )}
-                </div>
+            <div className="min-w-0">
 
-                <div>
-                  <p className="text-[11px] font-bold">
-                    {lowStockItems.length
-                      ? `${lowStockItems.length} item${
-                          lowStockItems.length > 1 ? "s" : ""
-                        } need attention`
-                      : "Menu looks healthy"}
-                  </p>
+              <div className="flex items-center gap-2">
 
-                  <p className="mt-1 text-[9px] leading-4 text-[#9B9289]">
-                    {lowStockItems.length
-                      ? "Review low-stock items before the next rush."
-                      : "No immediate stock issues detected."}
-                  </p>
-                </div>
+                <h1 className="truncate text-[19px] font-bold tracking-[-0.03em] text-[#29251F]">
+                  Menu
+                </h1>
+
+                <span className="rounded-full bg-[#E8F5F0] px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#237762]">
+                  {loading
+                    ? "..."
+                    : `${activeItems.length} live`}
+                </span>
+
               </div>
-            </div>
-          </div>
 
-          <div className="border-t border-white/10">
-            <div className="px-4 py-2.5">
-              <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#938A81]">
-                Menu structure
+              <p className="mt-0.5 truncate text-[11px] text-[#81766B]">
+                Control what customers can order
               </p>
+
             </div>
 
-            {categories
-              .filter((category) => category !== "All")
-              .map((category) => {
-                const count = items.filter(
-                  (item) => item.category === category
-                ).length;
-
-                if (!count) return null;
-
-                return (
-                  <div
-                    key={category}
-                    className="flex items-center justify-between border-t border-white/[0.07] px-4 py-2.5"
-                  >
-                    <span className="text-[10px] text-[#B1A9A0]">
-                      {category}
-                    </span>
-
-                    <span className="text-[10px] font-bold text-white">
-                      {count}
-                    </span>
-                  </div>
-                );
-              })}
           </div>
 
-          <div className="border-t border-white/10 p-3">
-            <div className="rounded-[10px] bg-white/[0.035] p-2.5">
-              <div className="flex gap-2">
-                <Sparkles
-                  size={12}
-                  className="mt-0.5 shrink-0 text-[#E6A23C]"
-                />
+          <div className="flex items-center gap-2">
 
-                <p className="text-[9px] leading-4 text-[#938B83]">
-                  Menu cards are loaded from the merchant menu API. Additions are written to the backend and the list is refreshed after a successful save.
-                </p>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
-
-      {toast.open && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-5 right-5 z-[9999] w-[min(360px,calc(100vw-2rem))] animate-[qrtokenToastIn_180ms_ease-out]"
-        >
-          <div
-            className={`flex items-start gap-3 rounded-[12px] border px-3.5 py-3 shadow-[0_12px_32px_rgba(41,37,31,0.18)] backdrop-blur-sm ${
-              toast.type === "error"
-                ? "border-[#E7C5C0] bg-[#FFF8F7] text-[#8E3D34]"
-                : "border-[#C9E2D8] bg-[#F5FCF9] text-[#287A66]"
-            }`}
-          >
-            <div
-              className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                toast.type === "error"
-                  ? "bg-[#F6E1DE]"
-                  : "bg-[#DDF1E9]"
-              }`}
+            <button
+              type="button"
+              onClick={loadItems}
+              disabled={
+                loading ||
+                !merchantId
+              }
+              title="Refresh menu"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#DDD2C6] bg-white text-[#655C53] shadow-sm transition hover:bg-[#FCF8F2] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {toast.type === "error" ? (
-                <AlertCircle size={15} />
-              ) : (
-                <CheckCircle2 size={15} />
-              )}
-            </div>
+              <RefreshCw
+                size={13}
+                className={
+                  loading
+                    ? "animate-spin"
+                    : ""
+                }
+              />
+            </button>
 
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold">
-                {toast.type === "error" ? "Operation failed" : "Success"}
-              </p>
-              <p
-                className={`mt-0.5 text-[10px] leading-4 ${
-                  toast.type === "error"
-                    ? "text-[#9A625B]"
-                    : "text-[#64877D]"
-                }`}
-              >
-                {toast.message}
-              </p>
+            <button
+              type="button"
+              onClick={
+                openAddModal
+              }
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#292621] px-3.5 text-[11px] font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#1E1C19] hover:shadow-md active:scale-[0.98]"
+            >
+              <Plus size={14} />
+              Add item
+            </button>
+
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            ERROR
+        ===================================================== */}
+
+        {error && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[#E7C1BC] bg-[#FFF2F0] px-3.5 py-2.5 text-[10px] font-semibold text-[#B44842]">
+
+            <div className="flex min-w-0 items-center gap-2">
+
+              <AlertTriangle
+                size={13}
+                className="shrink-0"
+              />
+
+              <span className="truncate">
+                {error}
+              </span>
+
             </div>
 
             <button
               type="button"
-              onClick={() => {
-                if (toastTimerRef.current) {
-                  window.clearTimeout(toastTimerRef.current);
-                }
-                setToast({
-                  open: false,
-                  type: "success",
-                  message: "",
-                });
-              }}
-              className="mt-0.5 rounded-md p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100"
-              aria-label="Dismiss notification"
+              onClick={
+                loadItems
+              }
+              className="shrink-0 rounded-md bg-white px-2 py-1 text-[9px] font-bold text-[#7A403C] shadow-sm"
             >
-              <X size={13} />
+              Retry
             </button>
-          </div>
-        </div>
-      )}
 
-      {modalOpen && (
-        <MenuItemDrawer
-          item={editingItem}
-          onClose={closeModal}
-          onSave={saveItem}
-        />
-      )}
+          </div>
+        )}
+
+        {/* =====================================================
+            STATS
+        ===================================================== */}
+
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+
+          <MiniStat
+            icon={UtensilsCrossed}
+            label="Menu items"
+            value={
+              loading
+                ? "..."
+                : items.length
+            }
+            sub={`${activeItems.length} available`}
+            iconClass="bg-[#F4E7D1] text-[#C67B16]"
+          />
+
+          <MiniStat
+            icon={Boxes}
+            label="Low stock"
+            value={
+              loading
+                ? "..."
+                : lowStockItems.length
+            }
+            sub={
+              lowStockItems.length
+                ? "Needs attention"
+                : "Everything healthy"
+            }
+            iconClass={
+              lowStockItems.length
+                ? "bg-[#FFF0D7] text-[#D58914]"
+                : "bg-[#E5F4EE] text-[#23836D]"
+            }
+          />
+
+          <MiniStat
+            icon={Eye}
+            label="Customer visible"
+            value={
+              loading
+                ? "..."
+                : activeItems.length
+            }
+            sub={`of ${items.length} items`}
+            iconClass="bg-[#E7F4EF] text-[#24856E]"
+          />
+
+          <MiniStat
+            icon={CircleDollarSign}
+            label="Stock value"
+            value={
+              loading
+                ? "..."
+                : `₹${totalValue.toLocaleString(
+                    "en-IN"
+                  )}`
+            }
+            sub="Current inventory"
+            iconClass="bg-[#EEE9E2] text-[#5D554D]"
+          />
+
+        </div>
+
+        {/* =====================================================
+            SEARCH / FILTER
+        ===================================================== */}
+
+        <div className="mb-3 flex flex-col gap-2.5 lg:flex-row">
+
+          <div className="relative flex-1">
+
+            <Search
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9A8F84]"
+            />
+
+            <input
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value
+                )
+              }
+              placeholder="Search items, categories..."
+              className="h-10.5 w-full rounded-[10px] border border-[#DDD2C6] bg-white pl-9 pr-3 text-[12px] text-[#29251F] outline-none transition placeholder:text-[#A59A8E] focus:border-[#D89A3D] focus:ring-2 focus:ring-[#E6A23C]/10"
+            />
+
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowOnlyActive(
+                (current) =>
+                  !current
+              )
+            }
+            className={`inline-flex h-10.5 items-center justify-center gap-1.5 rounded-[10px] border px-3.5 text-[11px] font-semibold transition ${
+              showOnlyActive
+                ? "border-[#292621] bg-[#292621] text-white"
+                : "border-[#DDD2C6] bg-white text-[#5E554C] hover:bg-[#FCF8F2]"
+            }`}
+          >
+            {showOnlyActive ? (
+              <Eye size={14} />
+            ) : (
+              <EyeOff size={14} />
+            )}
+
+            {showOnlyActive
+              ? "Available only"
+              : "All availability"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setSelectedCategory(
+                "All"
+              )
+            }
+            className="inline-flex h-10.5 items-center justify-center gap-1.5 rounded-[10px] border border-[#DDD2C6] bg-white px-3.5 text-[11px] font-semibold text-[#5E554C] transition hover:bg-[#FCF8F2]"
+          >
+            <SlidersHorizontal
+              size={14}
+            />
+            Reset category
+          </button>
+
+        </div>
+
+        {/* =====================================================
+            CATEGORIES
+        ===================================================== */}
+
+        <div className="mb-4 overflow-x-auto pb-1">
+
+          <div className="flex min-w-max gap-1.5">
+
+            {categories.map(
+              (category) => {
+                const count =
+                  category === "All"
+                    ? items.length
+                    : items.filter(
+                        (item) =>
+                          item.category ===
+                          category
+                      ).length;
+
+                const selected =
+                  selectedCategory ===
+                  category;
+
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() =>
+                      setSelectedCategory(
+                        category
+                      )
+                    }
+                    className={`group inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                      selected
+                        ? "border-[#292621] bg-[#292621] text-white shadow-sm"
+                        : "border-[#DDD2C6] bg-white text-[#6D6257] hover:border-[#CFC1B2] hover:bg-[#FCF8F2]"
+                    }`}
+                  >
+
+                    {category}
+
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                        selected
+                          ? "bg-white/10 text-[#F0B348]"
+                          : "bg-[#F3EEE8] text-[#8B7F73]"
+                      }`}
+                    >
+                      {count}
+                    </span>
+
+                  </button>
+                );
+              }
+            )}
+
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            CONTENT
+        ===================================================== */}
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+
+          <div className="min-w-0">
+
+            {loading &&
+            items.length === 0 ? (
+              <MenuLoading />
+            ) : filteredItems.length >
+              0 ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+
+                {filteredItems.map(
+                  (item) => (
+                    <MenuCard
+                      key={item.id}
+                      item={item}
+                      onEdit={() =>
+                        openEditModal(
+                          item
+                        )
+                      }
+                      onDelete={() =>
+                        deleteItem(
+                          item.id
+                        )
+                      }
+                      onToggle={() =>
+                        toggleActive(
+                          item.id
+                        )
+                      }
+                      actionLoading={
+                        actionLoadingId ===
+                        item.id
+                      }
+                    />
+                  )
+                )}
+
+              </div>
+            ) : (
+              <EmptyMenu
+                search={
+                  search ||
+                  selectedCategory !==
+                    "All"
+                }
+                onAdd={
+                  openAddModal
+                }
+              />
+            )}
+
+          </div>
+
+          {/* ===================================================
+              MENU PULSE
+          =================================================== */}
+
+          <aside className="h-fit overflow-hidden rounded-[16px] bg-[#292621] text-white shadow-[0_10px_28px_rgba(31,27,22,0.13)]">
+
+            <div className="border-b border-white/[0.08] px-4 py-3.5">
+
+              <div className="flex items-center justify-between">
+
+                <div className="flex items-center gap-2.5">
+
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E6A23C] text-[#292015]">
+                    <Sparkles
+                      size={14}
+                    />
+                  </div>
+
+                  <div>
+
+                    <h2 className="text-[12px] font-bold">
+                      Menu pulse
+                    </h2>
+
+                    <p className="mt-0.5 text-[9px] text-[#AFA69C]">
+                      Live backend menu
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <ArrowUpRight
+                  size={14}
+                  className="text-[#E6A23C]"
+                />
+
+              </div>
+
+            </div>
+
+            <div className="p-3">
+
+              <div
+                className={`rounded-[12px] border p-3 ${
+                  lowStockItems.length
+                    ? "border-[#6D512A] bg-[#352C20]"
+                    : "border-white/10 bg-white/[0.03]"
+                }`}
+              >
+
+                <div className="flex items-start gap-2.5">
+
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                      lowStockItems.length
+                        ? "bg-[#F5B447] text-[#382610]"
+                        : "bg-[#214D43] text-[#55D0B0]"
+                    }`}
+                  >
+                    {lowStockItems.length ? (
+                      <AlertTriangle
+                        size={15}
+                      />
+                    ) : (
+                      <Check
+                        size={15}
+                      />
+                    )}
+                  </div>
+
+                  <div>
+
+                    <p className="text-[11px] font-bold">
+                      {lowStockItems.length
+                        ? `${lowStockItems.length} item${
+                            lowStockItems.length >
+                            1
+                              ? "s"
+                              : ""
+                          } need attention`
+                        : "Menu looks healthy"}
+                    </p>
+
+                    <p className="mt-1 text-[9px] leading-4 text-[#9B9289]">
+                      {lowStockItems.length
+                        ? "Review low-stock items before the next rush."
+                        : "No immediate stock issues detected."}
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <div className="border-t border-white/10">
+
+              <div className="px-4 py-2.5">
+
+                <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#938A81]">
+                  Menu structure
+                </p>
+
+              </div>
+
+              {categories
+                .filter(
+                  (category) =>
+                    category !==
+                    "All"
+                )
+                .map(
+                  (category) => {
+                    const count =
+                      items.filter(
+                        (item) =>
+                          item.category ===
+                          category
+                      ).length;
+
+                    if (!count) {
+                      return null;
+                    }
+
+                    return (
+                      <div
+                        key={
+                          category
+                        }
+                        className="flex items-center justify-between border-t border-white/[0.07] px-4 py-2.5"
+                      >
+
+                        <span className="text-[10px] text-[#B1A9A0]">
+                          {
+                            category
+                          }
+                        </span>
+
+                        <span className="text-[10px] font-bold text-white">
+                          {count}
+                        </span>
+
+                      </div>
+                    );
+                  }
+                )}
+
+            </div>
+
+            <div className="border-t border-white/10 p-3">
+
+              <div className="rounded-[10px] bg-white/[0.035] p-2.5">
+
+                <div className="flex gap-2">
+
+                  <Sparkles
+                    size={12}
+                    className="mt-0.5 shrink-0 text-[#E6A23C]"
+                  />
+
+                  <p className="text-[9px] leading-4 text-[#938B83]">
+                    Menu cards are loaded
+                    from the merchant menu
+                    API. Additions are written
+                    to the backend and the
+                    list is refreshed after a
+                    successful save.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </aside>
+
+        </div>
+
+        {/* =====================================================
+            TOAST
+        ===================================================== */}
+
+        {toast.open && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-5 right-5 z-[9999] w-[min(360px,calc(100vw-2rem))] animate-[qrtokenToastIn_180ms_ease-out]"
+          >
+
+            <div
+              className={`flex items-start gap-3 rounded-[12px] border px-3.5 py-3 shadow-[0_12px_32px_rgba(41,37,31,0.18)] backdrop-blur-sm ${
+                toast.type ===
+                "error"
+                  ? "border-[#E7C5C0] bg-[#FFF8F7] text-[#8E3D34]"
+                  : "border-[#C9E2D8] bg-[#F5FCF9] text-[#287A66]"
+              }`}
+            >
+
+              <div
+                className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                  toast.type ===
+                  "error"
+                    ? "bg-[#F6E1DE]"
+                    : "bg-[#DDF1E9]"
+                }`}
+              >
+                {toast.type ===
+                "error" ? (
+                  <AlertCircle
+                    size={15}
+                  />
+                ) : (
+                  <CheckCircle2
+                    size={15}
+                  />
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+
+                <p className="text-[11px] font-bold">
+                  {toast.type ===
+                  "error"
+                    ? "Operation failed"
+                    : "Success"}
+                </p>
+
+                <p
+                  className={`mt-0.5 text-[10px] leading-4 ${
+                    toast.type ===
+                    "error"
+                      ? "text-[#9A625B]"
+                      : "text-[#64877D]"
+                  }`}
+                >
+                  {toast.message}
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    toastTimerRef.current
+                  ) {
+                    window.clearTimeout(
+                      toastTimerRef.current
+                    );
+                  }
+
+                  setToast({
+                    open: false,
+                    type: "success",
+                    message: "",
+                  });
+                }}
+                className="mt-0.5 rounded-md p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100"
+                aria-label="Dismiss notification"
+              >
+                <X size={13} />
+              </button>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* =====================================================
+            DRAWER
+        ===================================================== */}
+
+        {modalOpen && (
+          <MenuItemDrawer
+            item={editingItem}
+            onClose={closeModal}
+            onSave={saveItem}
+          />
+        )}
+
       </div>
     </>
   );
@@ -946,22 +1366,37 @@ function MenuManagerPage() {
 function MenuLoading() {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-      {[1, 2, 3, 4, 5, 6].map((item) => (
-        <div
-          key={item}
-          className="overflow-hidden rounded-[14px] border border-[#E0D5C8] bg-white"
-        >
-          <div className="h-[135px] animate-pulse bg-[#EEE8E0]" />
-          <div className="space-y-3 p-3">
-            <div className="h-3 w-2/3 animate-pulse rounded bg-[#F0EBE3]" />
-            <div className="h-2.5 w-full animate-pulse rounded bg-[#F5F0E9]" />
-            <div className="h-8 w-full animate-pulse rounded-lg bg-[#F5F0E9]" />
+
+      {[1, 2, 3, 4, 5, 6].map(
+        (item) => (
+          <div
+            key={item}
+            className="overflow-hidden rounded-[14px] border border-[#E0D5C8] bg-white"
+          >
+
+            <div className="h-[135px] animate-pulse bg-[#EEE8E0]" />
+
+            <div className="space-y-3 p-3">
+
+              <div className="h-3 w-2/3 animate-pulse rounded bg-[#F0EBE3]" />
+
+              <div className="h-2.5 w-full animate-pulse rounded bg-[#F5F0E9]" />
+
+              <div className="h-8 w-full animate-pulse rounded-lg bg-[#F5F0E9]" />
+
+            </div>
+
           </div>
-        </div>
-      ))}
+        )
+      )}
+
     </div>
   );
 }
+
+/* =============================================================
+   MINI STAT
+============================================================= */
 
 function MiniStat({
   icon: Icon,
@@ -1002,7 +1437,6 @@ function MiniStat({
     </div>
   );
 }
-
 
 /* =============================================================
    MENU CARD
@@ -1052,7 +1486,6 @@ function MenuCard({
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent" />
 
-
         {/* Availability */}
 
         <div className="absolute left-2.5 top-2.5">
@@ -1081,7 +1514,6 @@ function MenuCard({
 
         </div>
 
-
         {/* More */}
 
         <div className="absolute right-2.5 top-2.5">
@@ -1101,15 +1533,15 @@ function MenuCard({
             />
           </button>
 
-
           {menuOpen && (
-
             <div className="absolute right-0 top-9 z-30 w-32 overflow-hidden rounded-lg border border-[#E3D7C9] bg-white py-1 shadow-xl">
 
               <button
                 type="button"
                 onClick={() => {
-                  setMenuOpen(false);
+                  setMenuOpen(
+                    false
+                  );
                   onEdit();
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#4B443D] hover:bg-[#F7F3ED]"
@@ -1121,7 +1553,9 @@ function MenuCard({
               <button
                 type="button"
                 onClick={() => {
-                  setMenuOpen(false);
+                  setMenuOpen(
+                    false
+                  );
                   onDelete();
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#C94B43] hover:bg-[#FFF1EF]"
@@ -1131,13 +1565,11 @@ function MenuCard({
               </button>
 
             </div>
-
           )}
 
         </div>
 
       </div>
-
 
       {/* Content */}
 
@@ -1176,7 +1608,6 @@ function MenuCard({
 
         </div>
 
-
         <div className="mt-3 flex items-center justify-between gap-2">
 
           <div className="flex min-w-0 items-center gap-1.5">
@@ -1194,7 +1625,6 @@ function MenuCard({
 
           </div>
 
-
           <button
             type="button"
             onClick={onToggle}
@@ -1203,12 +1633,18 @@ function MenuCard({
                 ? "Hide item"
                 : "Make available"
             }
-            disabled={actionLoading}
+            disabled={
+              actionLoading
+            }
             className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition ${
               item.active
                 ? "bg-[#278B74]"
                 : "bg-[#C8C0B6]"
-            } ${actionLoading ? "cursor-not-allowed opacity-60" : ""}`}
+            } ${
+              actionLoading
+                ? "cursor-not-allowed opacity-60"
+                : ""
+            }`}
           >
             <span
               className={`absolute top-[3px] h-4 w-4 rounded-full bg-white shadow-sm transition ${
@@ -1220,7 +1656,6 @@ function MenuCard({
           </button>
 
         </div>
-
 
         <button
           type="button"
@@ -1241,7 +1676,6 @@ function MenuCard({
     </div>
   );
 }
-
 
 /* =============================================================
    STOCK STATE
@@ -1279,7 +1713,6 @@ function getStockState(item) {
   };
 }
 
-
 /* =============================================================
    EMPTY
 ============================================================= */
@@ -1292,6 +1725,7 @@ function EmptyMenu({
     <div className="flex min-h-[350px] flex-col items-center justify-center rounded-[16px] border border-dashed border-[#DCCFC0] bg-white px-6 text-center">
 
       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F5EBDD] text-[#C77C1F]">
+
         {search ? (
           <Search size={20} />
         ) : (
@@ -1299,6 +1733,7 @@ function EmptyMenu({
             size={20}
           />
         )}
+
       </div>
 
       <h3 className="mt-3 text-[14px] font-bold text-[#302B26]">
@@ -1328,7 +1763,6 @@ function EmptyMenu({
   );
 }
 
-
 /* =============================================================
    DRAWER
 ============================================================= */
@@ -1338,78 +1772,103 @@ function MenuItemDrawer({
   onClose,
   onSave,
 }) {
-  const isEditing = Boolean(item);
+  const isEditing =
+    Boolean(item);
 
-  const [form, setForm] = useState({
-    name: item?.name || "",
-    description: item?.description || "",
-    price: item?.price ?? "",
-    category: item?.category || "",
-    stock: item?.stock ?? 0,
-    vegetarian: item?.vegetarian ?? true,
-    active: item?.active ?? true,
-    image: item?.image || "",
-  });
+  const [form, setForm] =
+    useState({
+      name: item?.name || "",
+      description:
+        item?.description || "",
+      price:
+        item?.price ?? "",
+      category:
+        item?.category || "",
+      stock:
+        item?.stock ?? 0,
+      vegetarian:
+        item?.vegetarian ?? true,
+      active:
+        item?.active ?? true,
+      image:
+        item?.image || "",
+    });
 
-  const updateField = (field, value) => {
+  const updateField = (
+    field,
+    value
+  ) => {
     setForm((current) => ({
       ...current,
       [field]: value,
     }));
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (
+    event
+  ) => {
     event.preventDefault();
 
     if (!form.name.trim()) {
-      window.alert("Please enter item name.");
+      window.alert(
+        "Please enter item name."
+      );
       return;
     }
 
     if (
       form.price === "" ||
-      !Number.isFinite(Number(form.price)) ||
+      !Number.isFinite(
+        Number(form.price)
+      ) ||
       Number(form.price) < 0
     ) {
-      window.alert("Please enter a valid item price.");
+      window.alert(
+        "Please enter a valid item price."
+      );
       return;
     }
 
     if (!form.category.trim()) {
-      window.alert("Please select a category.");
+      window.alert(
+        "Please select a category."
+      );
       return;
     }
 
-    // if (
-    //   !form.unlimited &&
-    //   (
-    //     form.stock === "" ||
-    //     !Number.isFinite(Number(form.stock)) ||
-    //     Number(form.stock) < 0
-    //   )
-    // ) {
-    //   window.alert("Please enter a valid stock quantity.");
-    //   return;
-    // }
-
     await onSave({
       ...form,
+
       name: form.name.trim(),
-      description: form.description.trim(),
-      category: form.category.trim(),
-      price: Number(form.price),
+
+      description:
+        form.description.trim(),
+
+      category:
+        form.category.trim(),
+
+      price:
+        Number(form.price),
+
       stock:
-    Number(form.stock) === -1
-    ? -1
-    : Math.max(0, Number(form.stock)),
-      image: form.image.trim(),
+        Number(form.stock) === -1
+          ? -1
+          : Math.max(
+              0,
+              Number(form.stock)
+            ),
+
+      image:
+        form.image.trim(),
     });
   };
 
   const drawerCategories = [
     ...FALLBACK_CATEGORIES,
     ...(form.category &&
-    !FALLBACK_CATEGORIES.includes(form.category)
+    !FALLBACK_CATEGORIES.includes(
+      form.category
+    )
       ? [form.category]
       : []),
   ];
@@ -1418,22 +1877,37 @@ function MenuItemDrawer({
     <div
       className="fixed inset-0 z-50 flex justify-end bg-[#201B17]/45 backdrop-blur-[3px]"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
           onClose();
         }
       }}
     >
+
       <div className="flex h-full w-full max-w-[500px] flex-col overflow-hidden bg-[#FCFAF7] shadow-[-24px_0_70px_rgba(30,25,20,0.22)]">
+
+        {/* Drawer Header */}
+
         <div className="flex shrink-0 items-center justify-between border-b border-[#E7DDD2] bg-[#FCFAF7] px-5 py-4">
+
           <div className="min-w-0">
+
             <div className="flex items-center gap-2">
+
               <h2 className="text-[17px] font-bold tracking-[-0.025em] text-[#29251F]">
-                {isEditing ? "Edit item" : "New menu item"}
+                {isEditing
+                  ? "Edit item"
+                  : "New menu item"}
               </h2>
 
               <span className="rounded-full bg-[#F2E7D7] px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#A96C16]">
-                {isEditing ? "Editing" : "Menu"}
+                {isEditing
+                  ? "Editing"
+                  : "Menu"}
               </span>
+
             </div>
 
             <p className="mt-0.5 text-[10px] text-[#8B7F73]">
@@ -1441,6 +1915,7 @@ function MenuItemDrawer({
                 ? "Review the item details before saving."
                 : "Add an item to the merchant menu."}
             </p>
+
           </div>
 
           <button
@@ -1451,15 +1926,27 @@ function MenuItemDrawer({
           >
             <X size={15} />
           </button>
+
         </div>
+
+        {/* Form */}
 
         <form
           id="menu-item-form"
-          onSubmit={handleSubmit}
+          onSubmit={
+            handleSubmit
+          }
           className="min-h-0 flex-1 overflow-y-auto px-5 py-5"
         >
+
+          {/* =================================================
+              VISUAL
+          ================================================= */}
+
           <section className="mb-6">
+
             <div className="mb-3">
+
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#B17A30]">
                 Visual
               </p>
@@ -1471,43 +1958,66 @@ function MenuItemDrawer({
               <p className="mt-0.5 text-[10px] leading-4 text-[#93887D]">
                 The supplied menu API accepts an image URL.
               </p>
+
             </div>
 
             {form.image ? (
               <div className="overflow-hidden rounded-[14px] border border-[#DCCFC1] bg-[#EEE8E0]">
+
                 <img
                   src={form.image}
-                  alt={form.name || "Menu item"}
+                  alt={
+                    form.name ||
+                    "Menu item"
+                  }
                   className="h-[165px] w-full object-cover"
-                  onError={(event) => {
-                    event.currentTarget.style.display = "none";
+                  onError={(
+                    event
+                  ) => {
+                    event.currentTarget.style.display =
+                      "none";
                   }}
                 />
 
                 <div className="flex items-center gap-2 border-t border-[#E5DACE] bg-white p-2.5">
+
                   <Camera
                     size={13}
                     className="shrink-0 text-[#B97012]"
                   />
 
                   <input
-                    value={form.image}
-                    onChange={(event) =>
-                      updateField("image", event.target.value)
+                    value={
+                      form.image
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      updateField(
+                        "image",
+                        event
+                          .target
+                          .value
+                      )
                     }
                     placeholder="https://..."
                     className={`${INPUT_CLASS} h-9`}
                   />
+
                 </div>
+
               </div>
             ) : (
               <div className="rounded-[14px] border border-dashed border-[#D8CABC] bg-[#F8F4EE] p-4">
+
                 <div className="flex items-center gap-2.5">
+
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F0E5D4] text-[#C47A18]">
                     <Camera size={17} />
                   </div>
 
                   <div className="min-w-0 flex-1">
+
                     <p className="text-[11px] font-bold text-[#B97012]">
                       Image URL
                     </p>
@@ -1515,23 +2025,41 @@ function MenuItemDrawer({
                     <p className="mt-0.5 text-[9px] text-[#91867A]">
                       Paste a public image URL for the menu item.
                     </p>
+
                   </div>
+
                 </div>
 
                 <input
-                  value={form.image}
-                  onChange={(event) =>
-                    updateField("image", event.target.value)
+                  value={
+                    form.image
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    updateField(
+                      "image",
+                      event.target
+                        .value
+                    )
                   }
                   placeholder="https://images.unsplash.com/..."
                   className={`${INPUT_CLASS} mt-3`}
                 />
+
               </div>
             )}
+
           </section>
 
+          {/* =================================================
+              DETAILS
+          ================================================= */}
+
           <section className="mb-6">
+
             <div className="mb-3">
+
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#B17A30]">
                 Details
               </p>
@@ -1543,52 +2071,92 @@ function MenuItemDrawer({
               <p className="mt-0.5 text-[10px] leading-4 text-[#93887D]">
                 These values are sent to the merchant menu API.
               </p>
+
             </div>
 
             <div className="space-y-3.5">
+
               <div>
-                <label className={LABEL_CLASS}>
+
+                <label
+                  className={
+                    LABEL_CLASS
+                  }
+                >
                   Item name
-                  <span className="ml-1 text-[#C57A17]">*</span>
+                  <span className="ml-1 text-[#C57A17]">
+                    *
+                  </span>
                 </label>
 
                 <input
-                  value={form.name}
-                  onChange={(event) =>
-                    updateField("name", event.target.value)
+                  value={
+                    form.name
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    updateField(
+                      "name",
+                      event.target
+                        .value
+                    )
                   }
                   placeholder="e.g. Masala Chai"
-                  className={INPUT_CLASS}
+                  className={
+                    INPUT_CLASS
+                  }
                 />
+
               </div>
 
               <div>
-                <label className={LABEL_CLASS}>
+
+                <label
+                  className={
+                    LABEL_CLASS
+                  }
+                >
                   Description
                 </label>
 
                 <textarea
-                  value={form.description}
-                  onChange={(event) =>
+                  value={
+                    form.description
+                  }
+                  onChange={(
+                    event
+                  ) =>
                     updateField(
                       "description",
-                      event.target.value
+                      event.target
+                        .value
                     )
                   }
                   placeholder="Short description customers will see"
                   rows={3}
                   className={`${INPUT_CLASS} h-auto resize-none py-2.5 leading-5`}
                 />
+
               </div>
 
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+
                 <div>
-                  <label className={LABEL_CLASS}>
+
+                  <label
+                    className={
+                      LABEL_CLASS
+                    }
+                  >
                     Price
-                    <span className="ml-1 text-[#C57A17]">*</span>
+                    <span className="ml-1 text-[#C57A17]">
+                      *
+                    </span>
                   </label>
 
                   <div className="relative">
+
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#756A60]">
                       ₹
                     </span>
@@ -1597,64 +2165,105 @@ function MenuItemDrawer({
                       type="number"
                       min="0"
                       step="0.01"
-                      value={form.price}
-                      onChange={(event) =>
+                      value={
+                        form.price
+                      }
+                      onChange={(
+                        event
+                      ) =>
                         updateField(
                           "price",
-                          event.target.value
+                          event.target
+                            .value
                         )
                       }
                       placeholder="15"
                       className={`${INPUT_CLASS} pl-7`}
                     />
+
                   </div>
+
                 </div>
 
                 <div>
-                  <label className={LABEL_CLASS}>
+
+                  <label
+                    className={
+                      LABEL_CLASS
+                    }
+                  >
                     Category
-                    <span className="ml-1 text-[#C57A17]">*</span>
+                    <span className="ml-1 text-[#C57A17]">
+                      *
+                    </span>
                   </label>
 
                   <div className="relative">
+
                     <select
-                      value={form.category}
-                      onChange={(event) =>
+                      value={
+                        form.category
+                      }
+                      onChange={(
+                        event
+                      ) =>
                         updateField(
                           "category",
-                          event.target.value
+                          event.target
+                            .value
                         )
                       }
                       className={`${INPUT_CLASS} appearance-none pr-9`}
                     >
+
                       <option value="">
                         Select category
                       </option>
 
                       {drawerCategories.map(
-                        (category) => (
+                        (
+                          category
+                        ) => (
                           <option
-                            key={category}
-                            value={category}
+                            key={
+                              category
+                            }
+                            value={
+                              category
+                            }
                           >
-                            {category}
+                            {
+                              category
+                            }
                           </option>
                         )
                       )}
+
                     </select>
 
                     <ChevronRight
                       size={14}
                       className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[#766B61]"
                     />
+
                   </div>
+
                 </div>
+
               </div>
+
             </div>
+
           </section>
 
+          {/* =================================================
+              OPERATIONS
+          ================================================= */}
+
           <section className="mb-6">
+
             <div className="mb-3">
+
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#B17A30]">
                 Operations
               </p>
@@ -1662,67 +2271,111 @@ function MenuItemDrawer({
               <h3 className="mt-0.5 text-[14px] font-bold text-[#37312B]">
                 Inventory
               </h3>
+
             </div>
 
-           <div className="overflow-hidden rounded-[14px] border border-[#E2D7CB] bg-white shadow-[0_3px_12px_rgba(54,43,30,0.025)]">
-  <div className="flex items-center justify-between gap-4 px-3.5 py-3.5">
-    <div className="flex min-w-0 items-center gap-2.5">
-      <div
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-          Number(form.stock) === -1
-            ? "bg-[#F5EAD8] text-[#C47A18]"
-            : "bg-[#E9F4EF] text-[#27846D]"
-        }`}
-      >
-        <Boxes size={14} />
-      </div>
+            <div className="overflow-hidden rounded-[14px] border border-[#E2D7CB] bg-white shadow-[0_3px_12px_rgba(54,43,30,0.025)]">
 
-      <div className="min-w-0">
-        <p className="text-[11px] font-bold text-[#3B342D]">
-          Unlimited inventory
-        </p>
+              <div className="flex items-center justify-between gap-4 px-3.5 py-3.5">
 
-        <p className="mt-0.5 text-[9px] leading-4 text-[#93887D]">
-          Treat this item as always available.
-        </p>
-      </div>
-    </div>
+                <div className="flex min-w-0 items-center gap-2.5">
 
-    <PremiumToggle
-      checked={Number(form.stock) === -1}
-      onChange={() =>
-        updateField(
-          "stock",
-          Number(form.stock) === -1 ? 0 : -1
-        )
-      }
-      color="gold"
-    />
-  </div>
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                      Number(
+                        form.stock
+                      ) === -1
+                        ? "bg-[#F5EAD8] text-[#C47A18]"
+                        : "bg-[#E9F4EF] text-[#27846D]"
+                    }`}
+                  >
+                    <Boxes size={14} />
+                  </div>
 
-  {Number(form.stock) !== -1 && (
-    <div className="border-t border-[#EEE5DC] bg-[#FAF7F2] px-3.5 py-3.5">
-      <label className={LABEL_CLASS}>
-        Available quantity
-      </label>
+                  <div className="min-w-0">
 
-      <input
-        type="number"
-        min=""
-        value={form.stock}
-        onChange={(event) =>
-          updateField("stock", event.target.value)
-        }
-        placeholder="e.g. 60"
-        className={INPUT_CLASS}
-      />
-    </div>
-  )}
-</div>
+                    <p className="text-[11px] font-bold text-[#3B342D]">
+                      Unlimited inventory
+                    </p>
+
+                    <p className="mt-0.5 text-[9px] leading-4 text-[#93887D]">
+                      Treat this item as always available.
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <PremiumToggle
+                  checked={
+                    Number(
+                      form.stock
+                    ) === -1
+                  }
+                  onChange={() =>
+                    updateField(
+                      "stock",
+                      Number(
+                        form.stock
+                      ) === -1
+                        ? 0
+                        : -1
+                    )
+                  }
+                  color="gold"
+                />
+
+              </div>
+
+              {Number(
+                form.stock
+              ) !== -1 && (
+                <div className="border-t border-[#EEE5DC] bg-[#FAF7F2] px-3.5 py-3.5">
+
+                  <label
+                    className={
+                      LABEL_CLASS
+                    }
+                  >
+                    Available quantity
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      form.stock
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      updateField(
+                        "stock",
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder="e.g. 60"
+                    className={
+                      INPUT_CLASS
+                    }
+                  />
+
+                </div>
+              )}
+
+            </div>
+
           </section>
 
+          {/* =================================================
+              CUSTOMER EXPERIENCE
+          ================================================= */}
+
           <section>
+
             <div className="mb-3">
+
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#B17A30]">
                 Customer experience
               </p>
@@ -1730,14 +2383,18 @@ function MenuItemDrawer({
               <h3 className="mt-0.5 text-[14px] font-bold text-[#37312B]">
                 Visibility & labels
               </h3>
+
             </div>
 
             <div className="overflow-hidden rounded-[14px] border border-[#E2D7CB] bg-white shadow-[0_3px_12px_rgba(54,43,30,0.025)]">
+
               <PremiumToggleRow
                 icon={Eye}
                 title="Available to customers"
                 description="Customers can order this item."
-                checked={form.active}
+                checked={
+                  form.active
+                }
                 onChange={() =>
                   updateField(
                     "active",
@@ -1750,7 +2407,9 @@ function MenuItemDrawer({
                 icon={Check}
                 title="Vegetarian"
                 description="Show the vegetarian indicator."
-                checked={form.vegetarian}
+                checked={
+                  form.vegetarian
+                }
                 onChange={() =>
                   updateField(
                     "vegetarian",
@@ -1759,17 +2418,28 @@ function MenuItemDrawer({
                 }
                 last
               />
+
             </div>
+
           </section>
 
           <div className="h-20" />
+
         </form>
 
+        {/* ===================================================
+            FOOTER
+        =================================================== */}
+
         <div className="shrink-0 border-t border-[#E7DDD2] bg-[#FCFAF7]/95 px-5 py-3.5 backdrop-blur-md">
+
           <div className="flex gap-2.5">
+
             <button
               type="button"
-              onClick={onClose}
+              onClick={
+                onClose
+              }
               className="h-9 flex-1 rounded-lg border border-[#DED3C7] bg-white px-3 text-[10px] font-bold text-[#554C44] transition hover:border-[#CFC1B4] hover:bg-[#F7F3ED]"
             >
               Cancel
@@ -1780,14 +2450,24 @@ function MenuItemDrawer({
               form="menu-item-form"
               className="h-9 flex-[1.35] rounded-lg bg-[#292621] px-3 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#1F1D1A]"
             >
-              {isEditing ? "Save changes" : "Add to menu"}
+              {isEditing
+                ? "Save changes"
+                : "Add to menu"}
             </button>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 }
+
+/* =============================================================
+   PREMIUM TOGGLE
+============================================================= */
 
 function PremiumToggle({
   checked,
@@ -1819,7 +2499,6 @@ function PremiumToggle({
     </button>
   );
 }
-
 
 /* =============================================================
    TOGGLE ROW
@@ -1868,7 +2547,6 @@ function PremiumToggleRow({
 
       </div>
 
-
       <PremiumToggle
         checked={checked}
         onChange={onChange}
@@ -1877,7 +2555,5 @@ function PremiumToggleRow({
     </div>
   );
 }
-
-
 
 export default MenuManagerPage;

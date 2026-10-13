@@ -135,7 +135,6 @@ function calculateDuration(startedAt) {
 /* ============================================================
    NORMALIZE LIVE API RESPONSE
 ============================================================ */
-
 function normalizeTables(response) {
   let rawTables = [];
 
@@ -162,36 +161,32 @@ function normalizeTables(response) {
 
       const firstOrder = orders[0] || null;
 
-      /*
-       * Keep the existing Floor Board data shape so the
-       * existing JSX/design does not need to be rebuilt.
-       */
       return {
         id: Number.isFinite(numericId)
           ? numericId
           : index + 1,
 
+        // Support the backend's tableName field.
         name:
           table?.tableName ||
+          table?.name ||
           `Table ${numericId || index + 1}`,
 
-        seats:
+        // Backend update response uses capacity.
+        seats: Number(
+          table?.capacity ??
           table?.seats ??
           fallbackMeta.seats ??
-          4,
+          4
+        ),
 
         section:
           table?.section ||
           fallbackMeta.section ||
           "Indoor Main",
 
-        /* BACKEND SOURCE OF TRUTH */
         isOccupied: Boolean(table?.isOccupied),
 
-        /*
-         * Keep status because your existing design uses it.
-         * It is DERIVED from backend fields.
-         */
         status: !table?.isOccupied
           ? "Available"
           : table?.hasCashPending
@@ -215,9 +210,6 @@ function normalizeTables(response) {
         sessionStartedAt:
           table?.sessionStartedAt || null,
 
-        /*
-         * Existing card expects these fields.
-         */
         token:
           firstOrder?.tokenNumber ||
           undefined,
@@ -231,22 +223,15 @@ function normalizeTables(response) {
             table?.sessionStartedAt
           ) || undefined,
 
-        /*
-         * Flatten all current-session order items.
-         * Table 3, for example, has TWO orders in the
-         * supplied response.
-         */
-        items: orders.flatMap(
-          (order) =>
-            Array.isArray(order?.items)
-              ? order.items
-              : []
+        items: orders.flatMap((order) =>
+          Array.isArray(order?.items)
+            ? order.items
+            : []
         ),
       };
     })
     .sort((a, b) => a.id - b.id);
 }
-
 /* ============================================================
    TOAST
 ============================================================ */
@@ -729,9 +714,7 @@ const deleteTable = async (tableId) => {
     (item) => item.id === tableId
   );
 
-  if (!table) {
-    return;
-  }
+  if (!table) return;
 
   if (table.isOccupied) {
     showToast(
@@ -750,24 +733,18 @@ const deleteTable = async (tableId) => {
   }
 
   try {
-    await apiRequest("/orders/tables", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        merchantId,
-        tableId,
-      }),
-    });
+    await apiRequest(
+      `/orders/tables/${merchantId}/${tableId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     showToast(
       `${table.name} deleted successfully.`
     );
 
-    await loadTables({
-      silent: true,
-    });
+    await loadTables({ silent: true });
   } catch (requestError) {
     console.error(
       "Failed to delete table:",
@@ -788,55 +765,59 @@ const deleteTable = async (tableId) => {
      ----------------------------------------------------------
      No table-update endpoint has been provided.
   ========================================================== */
-
 const saveEditedTable = async (updatedData) => {
   if (!merchantId || !selectedTable) {
-    showToast(
-      "Table information is not available.",
-      "error"
-    );
+    showToast("Table information is not available.", "error");
     return;
   }
 
+  const tableId = selectedTable.id;
+  const endpoint = `/orders/tables/${merchantId}/${tableId}`;
+
+  const payload = {
+    tableName: updatedData.name,
+    capacity: Number(updatedData.seats),
+    section: updatedData.section,
+  };
+
+  console.log("Selected table:", selectedTable);
+  console.log("Edit form data:", updatedData);
+  console.log("PUT URL:", endpoint);
+  console.log("PUT payload:", payload);
+
   try {
-    await apiRequest("/orders/tables", {
+    const result = await apiRequest(endpoint, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        merchantId,
-        tableId: selectedTable.id,
-        name: updatedData.name,
-        seats: Number(updatedData.seats),
-        section: updatedData.section,
-      }),
+      body: JSON.stringify(payload),
     });
 
+    console.log("Update response:", result);
+
+    if (result?.success === false) {
+      throw new Error(result.message || "Table update failed.");
+    }
+
     showToast(
-      `${selectedTable.name} updated successfully.`
-    );
+  `${result?.table?.tableName || updatedData.name} updated successfully.`
+);
 
     closeModal();
 
-    await loadTables({
-      silent: true,
-    });
+    await loadTables({ silent: true });
   } catch (requestError) {
-    console.error(
-      "Failed to update table:",
-      requestError
-    );
+    console.error("Failed to update table:", requestError);
 
     showToast(
-      getErrorMessage(
-        requestError,
-        "Unable to update table."
-      ),
+      getErrorMessage(requestError, "Unable to update table."),
       "error"
     );
   }
 };
+
+
 
   /* ==========================================================
      QR
