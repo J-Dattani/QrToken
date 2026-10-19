@@ -45,20 +45,23 @@ const MenuPage = () => {
   const [categories, setCategories] = useState([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [taxConfig, setTaxConfig] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const { merchantId } = useParams();
 
   const orders = getOrderHistory();
 
-
   // Fetch merchant menu
-  useEffect(() => {
-    const fetchMenu = async () => {
-      try {
-        const response = await api.get(
-          `/menu/public/${merchantId}`
-        );
+  const fetchMenu = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get(
+        `/menu/public/${merchantId}`
+      );
 
+      if (response.data?.merchant) {
         setMerchant(response.data.merchant);
         setItems(response.data.items || []);
         setTaxConfig(response.data.taxConfig);
@@ -73,16 +76,18 @@ const MenuPage = () => {
             )
           ),
         ]);
-
-        console.log(response.data.items);
-        console.log(response.data.merchant);
-        console.log(response.data.merchant.taxConfig);
-
-      } catch (error) {
-        console.error("Failed to fetch menu:", error);
+      } else {
+        setError("Restaurant not found or menu is unavailable.");
       }
-    };
+    } catch (err) {
+      console.error("Failed to fetch menu:", err);
+      setError("Unable to connect to server. Please check your internet connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchMenu();
   }, [merchantId]);
 
@@ -172,8 +177,54 @@ const MenuPage = () => {
   });
 
 
+  // Error State
+  if (error && !merchant) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          bgcolor: "#F8F3ED",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          px: 3,
+          textAlign: "center",
+        }}
+      >
+        <Typography
+          sx={{
+            color: "#6F4E37",
+            fontWeight: 700,
+            fontSize: "1.1rem",
+            mb: 1,
+          }}
+        >
+          {error}
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={fetchMenu}
+          sx={{
+            mt: 2,
+            bgcolor: "#6F4E37",
+            color: "#fff",
+            fontWeight: 600,
+            borderRadius: 2,
+            px: 3,
+            py: 1,
+            textTransform: "none",
+            "&:hover": { bgcolor: "#5A3E2B" },
+          }}
+        >
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
   // Loading
-  if (!merchant) {
+  if (!merchant || loading) {
     return (
       <Box
         sx={{

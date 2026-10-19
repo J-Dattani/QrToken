@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       devOptions: {
-        enabled: true,
+        enabled: false,
       },
       manifest: {
         name: "QRToken",
@@ -38,10 +38,7 @@ export default defineConfig({
     }),
   ],
   server: {
-    host: true,
-    allowedHosts: [".trycloudflare.com"],
-    hmr: {
-      clientPort: 443,
-    },
+    host: true, // Listen on 0.0.0.0 so all network devices can access
+    allowedHosts: true, // Allow any hostname or IP
   },
 });
