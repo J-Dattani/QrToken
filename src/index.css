@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #7c2d12;
+  --primary-light: #9a3412;
+  --primary-dark: #431407;
+
+  --accent: #f59e0b;
+  --accent-light: #fbbf24;
+
+  --surface: #fffaf5;
+  --card: #ffffff;
+
+  --heading: #1f2937;
+  --body: #6b7280;
+
+  --success: #16a34a;
+  --danger: #dc2626;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+body {
+  background: var(--surface);
+  color: var(--heading);
+  font-family: "Inter", "Roboto", "Helvetica", "Arial", sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.sidebar-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+@layer components {
+  .input-style {
+    width: 100%;
+    height: 48px;
+    border: 1px solid #e1d7ca;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 0 14px;
+    font-size: 15px;
+    color: #292725;
+    outline: none;
+    transition: 0.15s ease;
+  }
+
+  .input-style::placeholder {
+    color: #aaa097;
+  }
+
+  .input-style:focus {
+    border-color: #e7a13a;
+    box-shadow: 0 0 0 2px rgba(231, 161, 58, 0.12);
+  }
+}
