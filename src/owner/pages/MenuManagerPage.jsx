@@ -1941,20 +1941,11 @@ const handleSubmit = async (event) => {
                     className="shrink-0 text-[#B97012]"
                   />
 
-                  <input
+                  <input 
                     value={
                       form.image
                     }
-                    onChange={(
-                      event
-                    ) =>
-                      updateField(
-                        "image",
-                        event
-                          .target
-                          .value
-                      )
-                    }
+                    readOnly
                     placeholder="https://..."
                     className={`${INPUT_CLASS} h-9`}
                   />
@@ -1977,27 +1968,16 @@ const handleSubmit = async (event) => {
                       Image URL
                     </p>
 
-                    <p className="mt-0.5 text-[9px] text-[#91867A]">
-                      Paste a public image URL for the menu item.
-                    </p>
-
                   </div>
 
                 </div>
 
                 <input
+                readonly
                   value={
                     form.image
                   }
-                  onChange={(
-                    event
-                  ) =>
-                    updateField(
-                      "image",
-                      event.target
-                        .value
-                    )
-                  }
+                  
                   placeholder="https://images.unsplash.com/..."
                   className={`${INPUT_CLASS} mt-3`}
                 />
