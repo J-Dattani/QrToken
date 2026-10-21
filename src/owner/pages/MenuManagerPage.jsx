@@ -449,102 +449,99 @@ function MenuManagerPage() {
        DELETE /menu/item/:itemId
   ========================================================== */
 
+
   const saveItem = async (itemData) => {
-    if (!merchantId) {
-      window.alert(
-        "Merchant information is not available."
-      );
-      return;
-    }
+  if (!merchantId) {
+    window.alert("Merchant information is not available.");
+    return;
+  }
 
-    const payload = {
-      name: itemData.name,
-      description: itemData.description,
-      price: Number(itemData.price),
-      category: itemData.category,
-      isVeg: Boolean(
-        itemData.vegetarian
-      ),
-      isAvailable: Boolean(
-        itemData.active
-      ),
-      stock: Number(
-        itemData.stock || 0
-      ),
-      image: itemData.image || "",
-    };
+  const isEditing = Boolean(editingItem?.id);
 
-    try {
-      setError("");
+  try {
+    
+    setError("");
+    setActionLoadingId(isEditing ? editingItem.id : "new");
 
-      if (editingItem?.id) {
-        setActionLoadingId(
-          editingItem.id
-        );
+    let imageUrl = itemData.image || "";
 
-        await apiRequest(
-          `/menu/item/${editingItem.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify(
-              payload
-            ),
-          }
-        );
-      } else {
-        setActionLoadingId("new");
+    // Step 1: Upload a newly selected image.
+    if (itemData.selectedImage) {
+      const imageFormData = new FormData();
 
-        await apiRequest(
-          `/menu/owner/${merchantId}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify(
-              payload
-            ),
-          }
+      // Use the field name expected by the upload API.
+      imageFormData.append("image", itemData.selectedImage);
+
+      const uploadResponse = await apiRequest("/upload", {
+        method: "POST",
+        body: imageFormData,
+      });
+
+      imageUrl = uploadResponse.url;
+
+      if (!imageUrl) {
+        throw new Error(
+          "Image upload succeeded without returning an image URL."
         );
       }
-
-      closeModal();
-
-      await loadItems();
-
-      showToast(
-        editingItem?.id
-          ? "Menu item updated successfully."
-          : "Menu item added successfully."
-      );
-    } catch (requestError) {
-      console.error(
-        editingItem
-          ? "Failed to update menu item:"
-          : "Failed to add menu item:",
-        requestError
-      );
-
-      const message =
-        requestError?.message ||
-        (editingItem
-          ? "Unable to update menu item."
-          : "Unable to add menu item.");
-
-      setError(message);
-      showToast(
-        message,
-        "error"
-      );
-    } finally {
-      setActionLoadingId("");
     }
-  };
+
+    // Step 2: Save the menu item with the returned image URL.
+    const payload = {
+      name: itemData.name,
+      description: itemData.description || "",
+      price: Number(itemData.price),
+      category: itemData.category,
+      isVeg: Boolean(itemData.vegetarian),
+      isAvailable: Boolean(itemData.active),
+      stock: Number(itemData.stock || 0),
+      image: imageUrl,
+    };
+
+    await apiRequest(
+      isEditing
+        ? `/menu/item/${editingItem.id}`
+        : `/menu/owner/${merchantId}`,
+      {
+        method: isEditing ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    closeModal();
+    await loadItems();
+
+    showToast(
+      isEditing
+        ? "Menu item updated successfully."
+        : "Menu item added successfully."
+    );
+  } catch (requestError) {
+    console.error(
+      isEditing
+        ? "Failed to update menu item:"
+        : "Failed to add menu item:",
+      requestError
+    );
+
+    const message =
+      requestError?.message ||
+      (isEditing
+        ? "Unable to update menu item."
+        : "Unable to add menu item.");
+
+    setError(message);
+    showToast(message, "error");
+
+    // Keep the drawer open so the user can correct the issue.
+    throw requestError;
+  } finally {
+    setActionLoadingId("");
+  }
+};
 
   /* ==========================================================
      DELETE
@@ -1365,7 +1362,7 @@ function MenuManagerPage() {
 
 function MenuLoading() {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+    <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
 
       {[1, 2, 3, 4, 5, 6].map(
         (item) => (
@@ -1449,34 +1446,29 @@ function MenuCard({
   onToggle,
   actionLoading = false,
 }) {
-  const [menuOpen, setMenuOpen] =
-    useState(false);
-
-  const stockState =
-    getStockState(item);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const stockState = getStockState(item);
 
   return (
     <div
-      className={`group relative overflow-visible rounded-[14px] border bg-white shadow-[0_4px_16px_rgba(54,43,30,0.035)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(54,43,30,0.075)] ${
+      className={`group relative min-w-0 overflow-visible rounded-[14px] border bg-white shadow-[0_4px_16px_rgba(54,43,30,0.035)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(54,43,30,0.075)] ${
         item.active
           ? "border-[#E0D5C8]"
           : "border-[#E8DDD2] opacity-75"
       }`}
     >
-
-      {/* Image */}
-
-      <div className="relative h-[135px] overflow-hidden rounded-t-[14px] bg-[#EEE8E0]">
-
+      {/* Square food image */}
+      <div className="relative aspect-square w-full overflow-hidden rounded-t-[14px] bg-[#EEE8E0]">
         {item.image ? (
           <img
             src={item.image}
             alt={item.name}
             className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.025] ${
-              item.active
-                ? ""
-                : "grayscale"
+              item.active ? "" : "grayscale"
             }`}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[#A49A8F]">
@@ -1487,61 +1479,39 @@ function MenuCard({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent" />
 
         {/* Availability */}
-
-        <div className="absolute left-2.5 top-2.5">
-
+        <div className="absolute left-2 top-2">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-bold backdrop-blur-md ${
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold backdrop-blur-md ${
               item.active
                 ? "bg-[#E9F8F1]/95 text-[#1C765F]"
                 : "bg-[#292621]/85 text-white"
             }`}
           >
-
             <span
               className={`h-1.5 w-1.5 rounded-full ${
-                item.active
-                  ? "bg-[#2DA983]"
-                  : "bg-[#B5ACA2]"
+                item.active ? "bg-[#2DA983]" : "bg-[#B5ACA2]"
               }`}
             />
-
-            {item.active
-              ? "Available"
-              : "Hidden"}
-
+            {item.active ? "Available" : "Hidden"}
           </span>
-
         </div>
 
-        {/* More */}
-
-        <div className="absolute right-2.5 top-2.5">
-
+        {/* More menu */}
+        <div className="absolute right-2 top-2">
           <button
             type="button"
-            onClick={() =>
-              setMenuOpen(
-                (current) =>
-                  !current
-              )
-            }
+            onClick={() => setMenuOpen((current) => !current)}
             className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-[#3C362F] shadow-sm backdrop-blur-md transition hover:bg-white"
           >
-            <MoreHorizontal
-              size={15}
-            />
+            <MoreHorizontal size={15} />
           </button>
 
           {menuOpen && (
             <div className="absolute right-0 top-9 z-30 w-32 overflow-hidden rounded-lg border border-[#E3D7C9] bg-white py-1 shadow-xl">
-
               <button
                 type="button"
                 onClick={() => {
-                  setMenuOpen(
-                    false
-                  );
+                  setMenuOpen(false);
                   onEdit();
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#4B443D] hover:bg-[#F7F3ED]"
@@ -1553,9 +1523,7 @@ function MenuCard({
               <button
                 type="button"
                 onClick={() => {
-                  setMenuOpen(
-                    false
-                  );
+                  setMenuOpen(false);
                   onDelete();
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#C94B43] hover:bg-[#FFF1EF]"
@@ -1563,24 +1531,16 @@ function MenuCard({
                 <Trash2 size={12} />
                 Delete
               </button>
-
             </div>
           )}
-
         </div>
-
       </div>
 
-      {/* Content */}
-
+      {/* Compact card details */}
       <div className="p-3">
-
-        <div className="flex items-start justify-between gap-2.5">
-
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-
             <div className="flex items-center gap-1.5">
-
               <h3 className="truncate text-[13px] font-bold text-[#29251F]">
                 {item.name}
               </h3>
@@ -1593,25 +1553,20 @@ function MenuCard({
                   <span className="h-1.5 w-1.5 rounded-full bg-[#23836D]" />
                 </span>
               )}
-
             </div>
 
-            <p className="mt-0.5 truncate text-[10px] text-[#85796D]">
+            <p className="mt-0.5 line-clamp-2 text-[10px] leading-4 text-[#85796D]">
               {item.description}
             </p>
-
           </div>
 
           <p className="shrink-0 text-[15px] font-bold tracking-[-0.02em] text-[#29251F]">
             ₹{item.price}
           </p>
-
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-2">
-
+        <div className="mt-2.5 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1.5">
-
             <span
               className={`inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[8px] font-bold ${stockState.className}`}
             >
@@ -1622,39 +1577,23 @@ function MenuCard({
             <span className="truncate text-[8px] font-semibold text-[#A0968B]">
               {item.category}
             </span>
-
           </div>
 
           <button
             type="button"
             onClick={onToggle}
-            title={
-              item.active
-                ? "Hide item"
-                : "Make available"
-            }
-            disabled={
-              actionLoading
-            }
+            title={item.active ? "Hide item" : "Make available"}
+            disabled={actionLoading}
             className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition ${
-              item.active
-                ? "bg-[#278B74]"
-                : "bg-[#C8C0B6]"
-            } ${
-              actionLoading
-                ? "cursor-not-allowed opacity-60"
-                : ""
-            }`}
+              item.active ? "bg-[#278B74]" : "bg-[#C8C0B6]"
+            } ${actionLoading ? "cursor-not-allowed opacity-60" : ""}`}
           >
             <span
               className={`absolute top-[3px] h-4 w-4 rounded-full bg-white shadow-sm transition ${
-                item.active
-                  ? "left-[19px]"
-                  : "left-[3px]"
+                item.active ? "left-[19px]" : "left-[3px]"
               }`}
             />
           </button>
-
         </div>
 
         <button
@@ -1662,17 +1601,10 @@ function MenuCard({
           onClick={onEdit}
           className="mt-2.5 flex h-8 w-full items-center justify-between rounded-lg border border-[#E8DED3] bg-[#FCFAF7] px-2.5 text-[10px] font-semibold text-[#5C544C] transition hover:border-[#D9C9B8] hover:bg-[#F7F1E9]"
         >
-          <span>
-            Manage item
-          </span>
-
-          <ChevronRight
-            size={13}
-          />
+          <span>Manage item</span>
+          <ChevronRight size={13} />
         </button>
-
       </div>
-
     </div>
   );
 }
@@ -1794,6 +1726,23 @@ function MenuItemDrawer({
         item?.image || "",
     });
 
+    
+    const [selectedImage, setSelectedImage] = useState(null);
+const [uploadingImage, setUploadingImage] = useState(false);
+const [imagePreview, setImagePreview] = useState("");
+
+useEffect(() => {
+  if (!selectedImage) {
+    setImagePreview("");
+    return;
+  }
+
+  const previewUrl = URL.createObjectURL(selectedImage);
+  setImagePreview(previewUrl);
+
+  return () => URL.revokeObjectURL(previewUrl);
+}, [selectedImage]);
+
   const updateField = (
     field,
     value
@@ -1804,64 +1753,37 @@ function MenuItemDrawer({
     }));
   };
 
-  const handleSubmit = async (
-    event
-  ) => {
-    event.preventDefault();
+  
+const handleSubmit = async (event) => {
+  event.preventDefault();
 
-    if (!form.name.trim()) {
-      window.alert(
-        "Please enter item name."
-      );
-      return;
-    }
+  if (!form.name.trim() || !form.category || form.price === "") {
+    return;
+  }
 
-    if (
-      form.price === "" ||
-      !Number.isFinite(
-        Number(form.price)
-      ) ||
-      Number(form.price) < 0
-    ) {
-      window.alert(
-        "Please enter a valid item price."
-      );
-      return;
-    }
+  setUploadingImage(true);
 
-    if (!form.category.trim()) {
-      window.alert(
-        "Please select a category."
-      );
-      return;
-    }
-
-    await onSave({
-      ...form,
-
+  try {
+    const itemData = {
       name: form.name.trim(),
+      description: form.description.trim(),
+      price: Number(form.price),
+      category: form.category,
+      stock: Number(form.stock || 0),
+      vegetarian: Boolean(form.vegetarian),
+      active: Boolean(form.active),
+      image: form.image || "",
+      selectedImage,
+    };
 
-      description:
-        form.description.trim(),
+    await onSave(itemData);
+  } catch (error) {
+    console.error("Failed to save menu item:", error);
+  } finally {
+    setUploadingImage(false);
+  }
+};
 
-      category:
-        form.category.trim(),
-
-      price:
-        Number(form.price),
-
-      stock:
-        Number(form.stock) === -1
-          ? -1
-          : Math.max(
-              0,
-              Number(form.stock)
-            ),
-
-      image:
-        form.image.trim(),
-    });
-  };
 
   const drawerCategories = [
     ...FALLBACK_CATEGORIES,
@@ -1944,7 +1866,7 @@ function MenuItemDrawer({
           ================================================= */}
 
           <section className="mb-6">
-
+            
             <div className="mb-3">
 
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#B17A30]">
@@ -1960,6 +1882,39 @@ function MenuItemDrawer({
               </p>
 
             </div>
+
+
+<div className="mb-3 rounded-[14px] border border-dashed border-[#D8CABC] bg-[#F8F4EE] p-3">
+  <label className="mb-2 block text-[10px] font-bold text-[#65594D]">
+    Choose image from your device
+  </label>
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(event) => {
+      const file = event.target.files?.[0];
+
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        window.alert("Please select an image file.");
+        event.target.value = "";
+        return;
+      }
+
+      setSelectedImage(file);
+    }}
+    className="w-full text-[11px] text-[#65594D] file:mr-3 file:rounded-lg file:border-0 file:bg-[#292621] file:px-3 file:py-2 file:text-[10px] file:font-bold file:text-white"
+  />
+
+
+  {selectedImage && (
+    <p className="mt-2 truncate text-[10px] text-[#65594D]">
+      Selected: {selectedImage.name}
+    </p>
+  )}
+</div>
 
             {form.image ? (
               <div className="overflow-hidden rounded-[14px] border border-[#DCCFC1] bg-[#EEE8E0]">
@@ -2444,17 +2399,18 @@ function MenuItemDrawer({
             >
               Cancel
             </button>
-
-            <button
-              type="submit"
-              form="menu-item-form"
-              className="h-9 flex-[1.35] rounded-lg bg-[#292621] px-3 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#1F1D1A]"
-            >
-              {isEditing
-                ? "Save changes"
-                : "Add to menu"}
-            </button>
-
+<button
+  type="submit"
+  form="menu-item-form"
+  disabled={uploadingImage}
+  className="h-9 flex-[1.35] rounded-lg bg-[#292621] px-3 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#1F1D1A]"
+>
+  {uploadingImage
+    ? "Uploading image..."
+    : isEditing
+      ? "Save changes"
+      : "Add to menu"}
+</button>
           </div>
 
         </div>
