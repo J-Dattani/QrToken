@@ -36,8 +36,8 @@ const DEFAULT_SETTINGS = {
   slug: "shree-krishna-tea-stall",
   plan: "STARTER PLAN",
   kycStatus: "APPROVED",
-  onlinePayments: true,
-  cashPayments: true,
+ onlinePayments: false,
+cashPayments: false,
   restaurantName: "Shree Krishna Tea Stall",
   tagline: "",
   contactPhone: "+91 98765 43210",
@@ -120,24 +120,34 @@ function SettingsPage() {
       const response = await apiRequest("/merchant/me");
       const data = response?.merchant || response?.data || response;
 
+      console.log("FULL MERCHANT RESPONSE:", response);
+console.log("PAYMENT MODES:", data?.paymentModes);
+
       if (!data) {
         throw new Error("Merchant data not found");
       }
 
-      setSettings((prev) => ({
-        ...prev,
-        outletName: data.name ?? prev.outletName,
-        restaurantName: data.name ?? prev.restaurantName,
-        contactPhone: data.phone ?? prev.contactPhone,
-        city: data.city ?? prev.city,
-        gstin: data.gstin ?? prev.gstin,
-        fssai: data.fssai ?? prev.fssai,
-        slug: data.slug ?? prev.slug,
-        plan: data.plan ? String(data.plan).toUpperCase() : prev.plan,
-        kycStatus: data.kycStatus
-          ? String(data.kycStatus).toUpperCase()
-          : prev.kycStatus,
-      }));
+      console.log("API payment modes:", data.paymentModes);
+
+  setSettings((prev) => ({
+  ...prev,
+  onlinePayments: data.paymentModes?.digital ?? prev.onlinePayments,
+  cashPayments: data.paymentModes?.cash ?? prev.cashPayments,
+
+  outletName: data.name ?? prev.outletName,
+  restaurantName: data.name ?? prev.restaurantName,
+  contactPhone: data.phone ?? prev.contactPhone,
+  city: data.city ?? prev.city,
+  gstin: data.gstin ?? prev.gstin,
+  fssai: data.fssai ?? prev.fssai,
+  slug: data.slug ?? prev.slug,
+  plan: data.plan
+    ? String(data.plan).toUpperCase()
+    : prev.plan,
+  kycStatus: data.kycStatus
+    ? String(data.kycStatus).toUpperCase()
+    : prev.kycStatus,
+}));
 
       setHasUnsavedChanges(false);
     } catch (error) {
@@ -162,6 +172,8 @@ function SettingsPage() {
     setHasUnsavedChanges(true);
   };
 
+  
+
   const saveSettings = async () => {
     try {
       setSavingSettings(true);
@@ -173,6 +185,10 @@ function SettingsPage() {
         gstin: settings.gstin,
         fssai: settings.fssai,
         isOpen: isStoreOpen,
+        paymentModes: {
+  digital: settings.onlinePayments,
+  cash: settings.cashPayments,
+},
       };
 
       const response = await apiRequest("/merchant/me", {
@@ -188,6 +204,8 @@ function SettingsPage() {
       if (data) {
         setSettings((prev) => ({
           ...prev,
+          onlinePayments: data?.paymentModes?.digital ?? true,
+          cashPayments: data?.paymentModes?.cash ?? true,
           outletName: data.name ?? prev.outletName,
           restaurantName: data.name ?? prev.restaurantName,
           contactPhone: data.phone ?? prev.contactPhone,
@@ -211,6 +229,51 @@ function SettingsPage() {
       setSavingSettings(false);
     }
   };
+
+
+const handlePaymentToggle = async (key) => {
+  const nextValue = !settings[key];
+
+  const paymentModes = {
+    digital:
+      key === "onlinePayments"
+        ? nextValue
+        : settings.onlinePayments,
+    cash:
+      key === "cashPayments"
+        ? nextValue
+        : settings.cashPayments,
+  };
+
+  try {
+    const response = await apiRequest("/merchant/me", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ paymentModes }),
+    });
+
+    const data = response?.merchant || response?.data || response;
+    const savedModes = data?.paymentModes ?? paymentModes;
+
+    setSettings((prev) => ({
+      ...prev,
+      onlinePayments: savedModes.digital ?? paymentModes.digital,
+      cashPayments: savedModes.cash ?? paymentModes.cash,
+    }));
+
+    showSavedToast(
+      `${key === "onlinePayments" ? "Digital payments" : "Cash at counter"} ${
+        nextValue ? "enabled" : "disabled"
+      } successfully`
+    );
+  } catch (error) {
+    console.error("Failed to update payment settings:", error);
+    showSavedToast(error.message || "Failed to update payment settings");
+  }
+};
+
 
   const resetSettings = async () => {
     const confirmed = window.confirm(
@@ -391,6 +454,7 @@ function SettingsPage() {
           settings={settings}
           updateSetting={updateSetting}
           isStoreOpen={isStoreOpen}
+          handlePaymentToggle={handlePaymentToggle}
           onToggleStore={() => {
             dispatch(toggleMerchantStatus());
             setHasUnsavedChanges(true);
@@ -419,6 +483,8 @@ function SettingsPage() {
   );
 }
 
+
+
 function GeneralSettings({
   settings,
   updateSetting,
@@ -427,6 +493,7 @@ function GeneralSettings({
   saveSettings,
   savingSettings,
   hasUnsavedChanges,
+  handlePaymentToggle,
   qrTableId,
   setQrTableId,
   qrSize,
@@ -613,12 +680,7 @@ function GeneralSettings({
                 title="Digital payments"
                 description="UPI, cards and supported online payment methods."
                 checked={settings.onlinePayments}
-                onChange={() =>
-                  updateSetting(
-                    "onlinePayments",
-                    !settings.onlinePayments
-                  )
-                }
+                onChange={() => handlePaymentToggle("onlinePayments")}
               />
 
               <PremiumToggleRow
@@ -626,12 +688,7 @@ function GeneralSettings({
                 title="Cash at counter"
                 description="Customers can reserve their token and pay at pickup."
                 checked={settings.cashPayments}
-                onChange={() =>
-                  updateSetting(
-                    "cashPayments",
-                    !settings.cashPayments
-                  )
-                }
+               onChange={() => handlePaymentToggle("cashPayments")}
                 last
               />
             </div>
