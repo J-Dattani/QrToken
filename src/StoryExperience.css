@@ -1,0 +1,2144 @@
+/* =========================================================
+   QRTOKEN — HORIZONTAL STORY EXPERIENCE
+   Ivory / charcoal / QRToken gold
+========================================================= */
+
+.qt-story {
+  --story-bg: #f8f3ed;
+  --story-card: #fffdf9;
+  --story-ink: #2d241e;
+  --story-muted: #887b70;
+  --story-line: #e9ded2;
+  --story-gold: #d89127;
+  --story-gold-light: #f8ead5;
+  --story-dark: #29231e;
+
+  position: relative;
+  overflow: hidden;
+  padding: 112px 0 105px;
+  background:
+    radial-gradient(ellipse at 8% 42%, rgba(225, 179, 112, 0.11), transparent 30%),
+    radial-gradient(ellipse at 92% 65%, rgba(219, 176, 123, 0.10), transparent 32%),
+    var(--story-bg);
+  color: var(--story-ink);
+  font-family: inherit;
+}
+
+.qt-story *,
+.qt-story *::before,
+.qt-story *::after {
+  box-sizing: border-box;
+}
+
+/* INTRO */
+
+.qt-story-intro {
+  width: min(780px, calc(100% - 48px));
+  margin: 0 auto 58px;
+  text-align: center;
+}
+
+.qt-story-kicker,
+.qt-story-ending > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--story-gold);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.19em;
+}
+
+.qt-story-kicker::before,
+.qt-story-kicker::after {
+  width: 20px;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  opacity: 0.55;
+}
+
+.qt-story-intro h2 {
+  margin: 20px 0 13px;
+  color: var(--story-ink);
+  font-size: clamp(34px, 4.2vw, 52px);
+  font-weight: 750;
+  letter-spacing: -0.065em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.qt-story-intro h2 span,
+.qt-story-ending h2 em {
+  color: var(--story-gold);
+  font-style: normal;
+}
+
+.qt-story-intro > p {
+  max-width: 510px;
+  margin: 0 auto;
+  color: var(--story-muted);
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+/* HORIZONTAL STORY WRAPPER */
+
+.qt-horizontal-story {
+  width: min(1320px, calc(100% - 80px));
+  margin: 0 auto;
+}
+
+.qt-story-rail-top,
+.qt-rail-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.qt-story-rail-top {
+  margin-bottom: 16px;
+}
+
+.qt-story-rail-label {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #a18d7b;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+}
+
+.qt-story-rail-label strong {
+  color: #9c6b2e;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.qt-story-rail-label i {
+  margin: 0 5px;
+  color: #cdbba7;
+  font-style: normal;
+}
+
+.qt-story-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.qt-story-controls button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #e8d9c8;
+  border-radius: 50%;
+  background: rgba(255, 253, 249, 0.8);
+  color: #8b6336;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.qt-story-controls button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--story-gold);
+  background: var(--story-gold);
+  color: white;
+  box-shadow: 0 8px 20px rgba(190, 118, 31, 0.18);
+}
+
+.qt-story-controls button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* HORIZONTAL SCROLL RAIL */
+
+.qt-story-rail {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 24px;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #d9b27d transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.qt-story-rail::-webkit-scrollbar {
+  height: 5px;
+}
+
+.qt-story-rail::-webkit-scrollbar-track {
+  border-radius: 10px;
+  background: #eadfd3;
+}
+
+.qt-story-rail::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: #d9a45b;
+}
+
+/* EACH CHAPTER PANEL */
+
+.qt-horizontal-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 64px);
+  flex: 0 0 100%;
+  min-width: 0;
+  min-height: 590px;
+  padding: clamp(26px, 4vw, 58px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 28px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 253, 249, 0.98),
+    rgba(246, 237, 226, 0.92)
+  );
+  box-shadow: 0 22px 65px rgba(73, 49, 29, 0.07);
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  opacity: 0.78;
+  transform: scale(0.985);
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease,
+    box-shadow 0.45s ease;
+}
+
+.qt-horizontal-panel::before {
+  position: absolute;
+  top: -170px;
+  right: -100px;
+  width: 350px;
+  height: 350px;
+  border: 1px solid rgba(199, 149, 87, 0.12);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.qt-horizontal-panel.is-active {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 28px 80px rgba(73, 49, 29, 0.105);
+}
+
+/* CHAPTER COPY */
+
+.qt-horizontal-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 440px;
+  padding: 12px 0;
+}
+
+.qt-horizontal-number {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 28px;
+  place-items: center;
+  border: 1px solid rgba(216, 145, 39, 0.35);
+  border-radius: 50%;
+  background: #fff9f0;
+  color: #bd7c29;
+  font-size: 13px;
+  font-weight: 850;
+  box-shadow: 0 0 0 7px rgba(216, 145, 39, 0.07);
+}
+
+.qt-horizontal-copy .qt-chapter-label {
+  display: block;
+  margin: 0 0 15px;
+  color: #b17a35;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+}
+
+.qt-horizontal-copy h3 {
+  max-width: 440px;
+  margin: 0 0 17px;
+  color: #30251e;
+  font-size: clamp(27px, 3.1vw, 43px);
+  font-weight: 750;
+  letter-spacing: -0.06em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.qt-horizontal-copy > p {
+  max-width: 410px;
+  margin: 0;
+  color: #81756b;
+  font-size: 13px;
+  line-height: 1.95;
+}
+
+.qt-horizontal-copy .qt-chapter-emphasis {
+  margin-top: 24px;
+  font-size: 11px;
+}
+
+.qt-horizontal-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 42px;
+  color: #b17a35;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+}
+
+.qt-horizontal-hint svg {
+  transition: transform 0.25s ease;
+}
+
+.qt-horizontal-panel.is-active .qt-horizontal-hint svg {
+  animation: qt-horizontal-nudge 1.8s ease-in-out infinite;
+}
+
+/* VISUAL AREA */
+
+.qt-horizontal-visual {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.qt-horizontal-visual .qt-story-stage {
+  min-height: 510px;
+  padding: 32px 30px 24px;
+  border-radius: 23px;
+}
+
+.qt-horizontal-visual .qt-scene-heading h3 {
+  font-size: 20px;
+}
+
+.qt-horizontal-visual .qt-rush-stats {
+  gap: 9px;
+}
+
+.qt-horizontal-visual .qt-fragment-canvas {
+  height: 330px;
+}
+
+.qt-horizontal-visual .qt-phone-scene,
+.qt-horizontal-visual .qt-relief-scene {
+  min-height: 370px;
+}
+
+.qt-horizontal-visual .qt-kitchen-scene {
+  padding: 17px;
+}
+
+/* PROGRESS */
+
+.qt-story-rail-bottom {
+  padding: 5px 2px 0;
+}
+
+.qt-rail-progress {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #e9ded2;
+}
+
+.qt-rail-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #c77e1c, #e8b15d);
+}
+
+.qt-rail-bottom-row {
+  margin-top: 13px;
+  color: #a39484;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+}
+
+.qt-progress-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qt-progress-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: #d9cbbd;
+  cursor: pointer;
+  transition:
+    width 0.3s ease,
+    background 0.3s ease;
+}
+
+.qt-progress-dots button.active {
+  width: 25px;
+  background: var(--story-gold);
+}
+
+/* ENDING */
+
+.qt-story-ending {
+  width: min(850px, calc(100% - 48px));
+  margin: 95px auto 0;
+  text-align: center;
+}
+
+.qt-story-ending h2 {
+  margin: 18px 0 12px;
+  color: #33271f;
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: 750;
+  letter-spacing: -0.06em;
+  line-height: 1.2;
+}
+
+.qt-story-ending p {
+  margin: 0;
+  color: #958578;
+  font-size: 11px;
+}
+
+/* =========================================================
+   SCENE BASE STYLES
+========================================================= */
+
+.qt-story-stage {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 90% 15%, rgba(225, 177, 108, 0.13), transparent 30%),
+    linear-gradient(145deg, #fffdf9, #f5ede3);
+  box-shadow: 0 24px 60px rgba(76, 53, 32, 0.08);
+}
+
+.qt-stage-decoration {
+  position: absolute;
+  z-index: 0;
+  width: 260px;
+  height: 260px;
+  border: 1px solid rgba(207, 158, 96, 0.12);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.qt-stage-decoration-one {
+  top: -145px;
+  right: -85px;
+}
+
+.qt-stage-decoration-two {
+  bottom: -190px;
+  left: -100px;
+}
+
+.qt-scene-heading {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 26px;
+}
+
+.qt-scene-index {
+  color: #b67b31;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+}
+
+.qt-scene-heading h3 {
+  margin: 13px 0 7px;
+  color: #352820;
+  font-size: 23px;
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+}
+
+.qt-scene-heading p {
+  margin: 0;
+  color: #948578;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.qt-scene-transition {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.qt-stage-caption {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 24px;
+  color: #a18d7b;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+}
+
+.qt-stage-caption-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #48a77c;
+  box-shadow: 0 0 0 5px rgba(72, 167, 124, 0.1);
+}
+
+.qt-stage-caption-line {
+  height: 1px;
+  flex: 1;
+  background: #e4d7c9;
+}
+
+/* =========================================================
+   CHAPTER 01 — THE LUNCH RUSH
+========================================================= */
+
+.qt-rush-scene {
+  position: relative;
+  min-height: 330px;
+}
+
+.qt-scene-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #aa9a89;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.qt-scene-topline > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qt-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #36ae85;
+  box-shadow: 0 0 0 5px rgba(54, 174, 133, 0.1);
+}
+
+.qt-rush-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.qt-rush-stats > div {
+  min-width: 0;
+  padding: 15px 13px;
+  border: 1px solid #eee2d6;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.qt-rush-stats > div > span {
+  display: block;
+  color: #b1a291;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.qt-rush-stats strong {
+  display: block;
+  margin-top: 7px;
+  color: #3a2e26;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.qt-rush-stats .qt-alert-number {
+  color: #cf7656;
+}
+
+.qt-ticket-stack {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin: 17px 0 0 6px;
+}
+
+.qt-ticket {
+  position: relative;
+  min-height: 91px;
+  padding: 14px 16px;
+  border: 1px solid #eee3d8;
+  border-left: 3px solid #e9ad59;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 8px 22px rgba(75, 53, 34, 0.035);
+}
+
+.qt-ticket-red {
+  margin-left: 12px;
+  border-left-color: #e9a99b;
+}
+
+.qt-ticket-gold {
+  margin-left: 24px;
+  border-left-color: #d9b36e;
+}
+
+.qt-ticket-head,
+.qt-ticket-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #b1a291;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.qt-ticket > strong {
+  display: block;
+  margin-top: 11px;
+  color: #4b3c31;
+  font-size: 12px;
+}
+
+.qt-ticket-bottom {
+  margin-top: 13px;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.qt-ticket-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e4ae60;
+  box-shadow: 0 0 0 5px rgba(228, 174, 96, 0.13);
+}
+
+.qt-floating-alert {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 15px;
+  border: 1px solid #eee1d3;
+  border-radius: 13px;
+  background: #fffefa;
+  color: #8d7967;
+  font-size: 9px;
+  font-weight: 750;
+  box-shadow: 0 12px 30px rgba(73, 49, 29, 0.09);
+}
+
+.qt-floating-alert svg {
+  color: #d89127;
+}
+
+.qt-alert-one {
+  top: 128px;
+  right: -3px;
+}
+
+.qt-alert-two {
+  right: 14px;
+  bottom: 46px;
+}
+
+.qt-rush-footer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 25px;
+  color: #c77b5d;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.qt-rush-footer svg {
+  flex: 0 0 auto;
+}
+
+/* =========================================================
+   CHAPTER 02 — DISCONNECTED OPERATIONS
+========================================================= */
+
+.qt-pressure-scene {
+  min-height: 340px;
+}
+
+.qt-disconnected-label {
+  color: #c77b5d;
+}
+
+.qt-fragment-canvas {
+  position: relative;
+  height: 330px;
+  margin-top: 8px;
+}
+
+.qt-fragment-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.qt-fragment-lines path {
+  fill: none;
+  stroke: #dfcbb5;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 7;
+}
+
+.qt-fragment-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: 86px;
+  height: 86px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #e9d7c1;
+  border-radius: 50%;
+  background: #fffaf3;
+  color: #c77b5d;
+  box-shadow: 0 0 0 10px rgba(216, 145, 39, 0.07);
+  transform: translate(-50%, -50%);
+}
+
+.qt-fragment-center span {
+  color: #94775c;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+}
+
+.qt-fragment-card {
+  position: absolute;
+  display: flex;
+  width: 142px;
+  min-height: 105px;
+  flex-direction: column;
+  padding: 12px;
+  border: 1px solid #ebdfd2;
+  border-radius: 13px;
+  background: rgba(255, 253, 249, 0.95);
+  box-shadow: 0 9px 25px rgba(73, 49, 29, 0.055);
+}
+
+.qt-fragment-orders {
+  top: 5px;
+  left: 1%;
+}
+
+.qt-fragment-payments {
+  top: 5px;
+  right: 1%;
+}
+
+.qt-fragment-chat {
+  bottom: 5px;
+  left: 1%;
+}
+
+.qt-fragment-kitchen {
+  right: 1%;
+  bottom: 5px;
+}
+
+.qt-fragment-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  margin-bottom: 7px;
+  place-items: center;
+  border-radius: 9px;
+  background: #f8ead7;
+  color: #bd812e;
+}
+
+.qt-fragment-card strong {
+  color: #47382d;
+  font-size: 10px;
+}
+
+.qt-fragment-card small {
+  margin-top: 3px;
+  color: #a09080;
+  font-size: 8px;
+}
+
+.qt-fragment-warning {
+  margin-top: 9px;
+  color: #c77b5d;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.qt-pressure-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 3px;
+  color: #a18e7c;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.qt-pressure-bottom svg {
+  color: #d49a4c;
+}
+
+/* =========================================================
+   CHAPTER 03 — CUSTOMER QR MENU
+========================================================= */
+
+.qt-phone-scene {
+  position: relative;
+  display: flex;
+  min-height: 370px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.qt-phone-orbit {
+  position: absolute;
+  width: 330px;
+  height: 330px;
+  border: 1px solid rgba(216, 145, 39, 0.17);
+  border-radius: 50%;
+}
+
+.qt-orbit-one {
+  transform: rotate(20deg) scaleY(0.72);
+}
+
+.qt-orbit-two {
+  width: 285px;
+  height: 285px;
+  border-style: dashed;
+  opacity: 0.65;
+}
+
+.qt-phone {
+  position: relative;
+  z-index: 2;
+  width: 218px;
+  padding: 8px;
+  border: 4px solid #302923;
+  border-radius: 29px;
+  background: #302923;
+  box-shadow: 0 22px 55px rgba(43, 32, 23, 0.22);
+}
+
+.qt-phone-notch {
+  position: absolute;
+  z-index: 4;
+  top: 7px;
+  left: 50%;
+  width: 68px;
+  height: 13px;
+  border-radius: 0 0 10px 10px;
+  background: #302923;
+  transform: translateX(-50%);
+}
+
+.qt-phone-screen {
+  overflow: hidden;
+  padding: 19px 11px 11px;
+  border-radius: 20px;
+  background: #fffdf9;
+}
+
+.qt-phone-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.qt-mini-brand {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: #f6e6cf;
+  color: #bd7c29;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.qt-phone-brand > div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.qt-phone-brand strong {
+  color: #43342a;
+  font-size: 9px;
+}
+
+.qt-phone-brand small {
+  margin-top: 2px;
+  color: #a39484;
+  font-size: 6px;
+}
+
+.qt-phone-menu {
+  color: #8c7d70;
+  font-size: 12px;
+}
+
+.qt-phone-welcome {
+  margin-top: 20px;
+}
+
+.qt-phone-welcome > span {
+  color: #b78a50;
+  font-size: 6px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.qt-phone-welcome h4 {
+  margin: 7px 0 5px;
+  color: #392c23;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 1.05;
+}
+
+.qt-phone-welcome h4 em {
+  color: #d89127;
+  font-style: normal;
+}
+
+.qt-phone-welcome p {
+  margin: 0;
+  color: #9c8d7e;
+  font-size: 7px;
+}
+
+.qt-phone-category {
+  display: flex;
+  gap: 5px;
+  margin: 13px 0;
+}
+
+.qt-phone-category span {
+  padding: 5px 8px;
+  border: 1px solid #eee4d8;
+  border-radius: 20px;
+  color: #9b8a79;
+  font-size: 6px;
+}
+
+.qt-phone-category span.active {
+  border-color: #d89127;
+  background: #d89127;
+  color: white;
+}
+
+.qt-phone-food {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 0;
+  border-top: 1px solid #f0e8df;
+}
+
+.qt-food-thumb {
+  display: grid;
+  width: 35px;
+  height: 35px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  background: #f7ead9;
+  color: #c48739;
+}
+
+.qt-food-two {
+  background: #e8f0e8;
+  color: #5f9677;
+}
+
+.qt-food-three {
+  background: #f5e8e2;
+  color: #c17e60;
+}
+
+.qt-food-info {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qt-food-info strong {
+  color: #49392d;
+  font-size: 7px;
+}
+
+.qt-food-info small {
+  color: #a49687;
+  font-size: 6px;
+}
+
+.qt-food-info b {
+  margin-top: 2px;
+  color: #47362a;
+  font-size: 7px;
+}
+
+.qt-phone-food button {
+  padding: 5px 6px;
+  border: 1px solid #e8d6bf;
+  border-radius: 6px;
+  background: #fffaf3;
+  color: #b77a2e;
+  font-size: 6px;
+  font-weight: 850;
+}
+
+.qt-phone-cart {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 9px;
+  border-radius: 9px;
+  background: #302923;
+  color: white;
+}
+
+.qt-phone-cart span {
+  font-size: 6px;
+  font-weight: 750;
+}
+
+.qt-phone-cart strong {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 7px;
+}
+
+.qt-scan-float,
+.qt-order-float {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border: 1px solid #eee1d3;
+  border-radius: 12px;
+  background: #fffefa;
+  box-shadow: 0 12px 30px rgba(73, 49, 29, 0.09);
+}
+
+.qt-scan-float {
+  top: 55px;
+  right: -5px;
+}
+
+.qt-scan-float > span,
+.qt-order-check {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: #f8ead7;
+  color: #c38434;
+}
+
+.qt-scan-float > div,
+.qt-order-float > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.qt-scan-float strong,
+.qt-order-float strong {
+  color: #5a493a;
+  font-size: 8px;
+}
+
+.qt-scan-float small,
+.qt-order-float small {
+  color: #a39382;
+  font-size: 7px;
+}
+
+.qt-scan-float > svg {
+  color: #54a47d;
+}
+
+.qt-order-float {
+  right: 0;
+  bottom: 35px;
+}
+
+.qt-order-check {
+  background: #e6f1e9;
+  color: #4b9b70;
+}
+
+/* =========================================================
+   CHAPTER 04 — KITCHEN DISPLAY
+========================================================= */
+
+.qt-kitchen-scene {
+  padding: 17px;
+}
+
+.qt-kitchen-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qt-kitchen-top h4 {
+  margin: 6px 0 0;
+  color: #3d3027;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.qt-kitchen-online {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid #dcebdd;
+  border-radius: 20px;
+  background: #f1f8f1;
+  color: #57946b;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.qt-kitchen-online > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #53a879;
+}
+
+.qt-kitchen-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 18px 0 13px;
+}
+
+.qt-kitchen-metrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 9px;
+  border: 1px solid #eee3d8;
+  border-radius: 11px;
+  background: #fffdfa;
+}
+
+.qt-kitchen-metrics strong {
+  color: #3e3027;
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.qt-kitchen-metrics strong span {
+  margin-left: 2px;
+  color: #bd8c4d;
+  font-size: 11px;
+}
+
+.qt-kitchen-metrics > div > span {
+  color: #a49483;
+  font-size: 7px;
+}
+
+.qt-kitchen-orders {
+  display: grid;
+  gap: 8px;
+}
+
+.qt-kitchen-order {
+  padding: 11px 12px;
+  border: 1px solid #eee3d8;
+  border-radius: 12px;
+  background: #fffdfa;
+}
+
+.qt-kitchen-order-top,
+.qt-kitchen-order-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qt-kitchen-order-top strong {
+  color: #a97837;
+  font-size: 8px;
+}
+
+.qt-kitchen-order-top > span,
+.qt-kitchen-order-bottom > span:last-child {
+  color: #a99a8b;
+  font-size: 7px;
+}
+
+.qt-kitchen-order-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 10px 0;
+}
+
+.qt-order-symbol {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: #f8ead7;
+  color: #c18437;
+}
+
+.qt-order-symbol.ready {
+  background: #e8f3e9;
+  color: #54946a;
+}
+
+.qt-kitchen-order-main strong {
+  min-width: 0;
+  flex: 1;
+  color: #493a2f;
+  font-size: 9px;
+}
+
+.qt-kitchen-order-main b {
+  color: #6f5c4a;
+  font-size: 9px;
+}
+
+.qt-order-status {
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.qt-order-status.preparing {
+  color: #bd873c;
+}
+
+.qt-order-status.new {
+  color: #c77b5d;
+}
+
+.qt-order-status.ready {
+  color: #54946a;
+}
+
+.qt-kitchen-sync {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid #dfeadd;
+  border-radius: 11px;
+  background: #f5faf3;
+}
+
+.qt-sync-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: #e5f0e4;
+  color: #57946b;
+}
+
+.qt-kitchen-sync > div:nth-child(2) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.qt-kitchen-sync strong {
+  color: #54745a;
+  font-size: 8px;
+}
+
+.qt-kitchen-sync small {
+  color: #92a18e;
+  font-size: 7px;
+}
+
+.qt-kitchen-sync > svg {
+  color: #57946b;
+}
+
+/* =========================================================
+   CHAPTER 05 — CONNECTED OPERATIONS
+========================================================= */
+
+.qt-relief-scene {
+  position: relative;
+  display: flex;
+  min-height: 370px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.qt-relief-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(224, 170, 94, 0.2), transparent 70%);
+  transform: translate(-50%, -50%);
+}
+
+.qt-relief-core {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: 150px;
+  height: 150px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #ead7bd;
+  border-radius: 50%;
+  background: rgba(255, 253, 249, 0.94);
+  box-shadow:
+    0 0 0 12px rgba(216, 145, 39, 0.055),
+    0 15px 40px rgba(73, 49, 29, 0.09);
+}
+
+.qt-relief-logo {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #e9b45f, #c78020);
+  color: white;
+  font-size: 22px;
+  font-weight: 900;
+  box-shadow: 0 7px 15px rgba(190, 118, 31, 0.2);
+}
+
+.qt-relief-core strong {
+  color: #3d3027;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.qt-relief-core > span {
+  color: #ad8b62;
+  font-size: 6px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.qt-relief-orbit {
+  position: absolute;
+  inset: 0;
+}
+
+.qt-relief-node {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  width: 105px;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border: 1px solid #ebdfd2;
+  border-radius: 13px;
+  background: rgba(255, 253, 249, 0.96);
+  box-shadow: 0 9px 25px rgba(73, 49, 29, 0.07);
+}
+
+.qt-relief-node > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: #f8ead7;
+  color: #bd812e;
+}
+
+.qt-relief-node strong {
+  color: #514033;
+  font-size: 8px;
+}
+
+.qt-relief-node small {
+  color: #9f8f7f;
+  font-size: 7px;
+}
+
+.qt-relief-node-1 {
+  top: 9%;
+  left: 7%;
+}
+
+.qt-relief-node-2 {
+  top: 9%;
+  right: 7%;
+}
+
+.qt-relief-node-3 {
+  bottom: 9%;
+  left: 7%;
+}
+
+.qt-relief-node-4 {
+  right: 7%;
+  bottom: 9%;
+}
+
+.qt-relief-note {
+  position: absolute;
+  z-index: 4;
+  bottom: 4px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border: 1px solid #ebdfd2;
+  border-radius: 30px;
+  background: #fffefa;
+  color: #967044;
+  font-size: 8px;
+  font-weight: 750;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(73, 49, 29, 0.07);
+  transform: translateX(-50%);
+}
+
+/* ANIMATION */
+
+@keyframes qt-horizontal-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+/* TABLET */
+
+@media (max-width: 1050px) {
+  .qt-horizontal-story {
+    width: calc(100% - 48px);
+  }
+
+  .qt-horizontal-panel {
+    grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.28fr);
+    gap: 24px;
+    min-height: 550px;
+    padding: 28px;
+  }
+
+  .qt-horizontal-visual .qt-story-stage {
+    min-height: 490px;
+    padding: 25px 20px 20px;
+  }
+
+  .qt-horizontal-visual .qt-fragment-card {
+    width: 120px;
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 760px) {
+  .qt-story {
+    padding: 78px 0 75px;
+  }
+
+  .qt-story-intro {
+    width: calc(100% - 40px);
+    margin-bottom: 38px;
+  }
+
+  .qt-story-intro h2 {
+    font-size: clamp(32px, 9vw, 43px);
+  }
+
+  .qt-story-intro > p {
+    font-size: 12px;
+  }
+
+  .qt-horizontal-story {
+    width: 100%;
+  }
+
+  .qt-story-rail-top {
+    padding: 0 20px;
+  }
+
+  .qt-story-rail {
+    gap: 12px;
+    padding: 3px 18px 18px;
+  }
+
+  .qt-horizontal-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 24px;
+    flex-basis: calc(100vw - 36px);
+    min-height: 0;
+    padding: 25px 20px 22px;
+    border-radius: 22px;
+  }
+
+  .qt-horizontal-copy {
+    max-width: none;
+    padding: 0;
+  }
+
+  .qt-horizontal-number {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 20px;
+    font-size: 11px;
+  }
+
+  .qt-horizontal-copy h3 {
+    font-size: clamp(25px, 7vw, 34px);
+  }
+
+  .qt-horizontal-copy > p {
+    font-size: 12px;
+  }
+
+  .qt-horizontal-copy .qt-chapter-emphasis {
+    margin-top: 17px;
+    font-size: 10px;
+  }
+
+  .qt-horizontal-hint {
+    margin-top: 20px;
+  }
+
+  .qt-horizontal-visual .qt-story-stage {
+    min-height: 475px;
+    padding: 23px 17px 18px;
+    border-radius: 17px;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading {
+    margin-bottom: 18px;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading h3 {
+    font-size: 17px;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading p {
+    font-size: 9px;
+  }
+
+  .qt-horizontal-visual .qt-fragment-canvas {
+    height: 300px;
+  }
+
+  .qt-horizontal-visual .qt-phone-scene,
+  .qt-horizontal-visual .qt-relief-scene {
+    min-height: 360px;
+  }
+
+  .qt-story-rail-bottom {
+    padding: 0 20px;
+  }
+
+  .qt-rail-bottom-row {
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 7px;
+  }
+
+  .qt-rail-bottom-row > span:last-child {
+    display: none;
+  }
+
+  .qt-story-ending {
+    margin-top: 60px;
+  }
+}
+
+/* SMALL MOBILE */
+
+@media (max-width: 420px) {
+  .qt-horizontal-panel {
+    flex-basis: calc(100vw - 26px);
+    padding: 21px 15px 17px;
+  }
+
+  .qt-horizontal-visual .qt-story-stage {
+    min-height: 445px;
+    padding: 19px 13px 16px;
+  }
+
+  .qt-horizontal-visual .qt-fragment-card {
+    width: 105px;
+    padding: 9px;
+  }
+
+  .qt-horizontal-visual .qt-phone {
+    width: 185px;
+  }
+
+  .qt-horizontal-visual .qt-phone-orbit {
+    width: 270px;
+    height: 270px;
+  }
+
+  .qt-horizontal-visual .qt-orbit-two {
+    width: 235px;
+    height: 235px;
+  }
+
+  .qt-horizontal-visual .qt-kitchen-scene {
+    padding: 12px;
+  }
+
+  .qt-horizontal-visual .qt-relief-node {
+    width: 88px;
+  }
+}
+
+/* ACCESSIBILITY */
+
+@media (prefers-reduced-motion: reduce) {
+  .qt-story *,
+  .qt-story *::before,
+  .qt-story *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+/* =========================================================
+   QRTOKEN — STORY PANEL SIZE & VIEWPORT FIT
+========================================================= */
+
+@media (min-width: 761px) {
+  .qt-horizontal-story {
+    width: min(1280px, calc(100% - 80px));
+  }
+
+  .qt-horizontal-panel {
+    height: min(680px, calc(100vh - 245px));
+    min-height: 560px;
+    grid-template-columns: 0.78fr 1.22fr;
+    gap: 35px;
+    padding: 35px 42px;
+    align-items: center;
+  }
+
+  .qt-horizontal-copy {
+    max-width: 420px;
+  }
+
+  .qt-horizontal-copy h3 {
+    font-size: clamp(27px, 2.5vw, 37px);
+    line-height: 1.13;
+  }
+
+  .qt-horizontal-copy > p {
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .qt-horizontal-hint {
+    margin-top: 27px;
+  }
+
+  .qt-horizontal-visual {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  .qt-horizontal-visual .qt-story-stage {
+    width: 100%;
+    min-height: 0;
+    height: 100%;
+    max-height: 590px;
+    padding: 23px 23px 17px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading {
+    margin-bottom: 17px;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading h3 {
+    font-size: 18px;
+    margin-top: 9px;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading p {
+    font-size: 10px;
+  }
+
+  .qt-horizontal-visual .qt-stage-caption {
+    margin-top: 15px;
+  }
+
+  /* Rush scene */
+  .qt-horizontal-visual .qt-rush-stats {
+    margin-top: 15px;
+  }
+
+  .qt-horizontal-visual .qt-rush-stats > div {
+    padding: 11px;
+  }
+
+  .qt-horizontal-visual .qt-rush-stats strong {
+    font-size: 23px;
+  }
+
+  .qt-horizontal-visual .qt-ticket-stack {
+    gap: 7px;
+    margin-top: 12px;
+  }
+
+  .qt-horizontal-visual .qt-ticket {
+    min-height: 72px;
+    padding: 10px 13px;
+  }
+
+  .qt-horizontal-visual .qt-ticket > strong {
+    margin-top: 7px;
+  }
+
+  .qt-horizontal-visual .qt-ticket-bottom {
+    margin-top: 8px;
+  }
+
+  .qt-horizontal-visual .qt-rush-footer {
+    margin-top: 15px;
+  }
+
+  .qt-horizontal-visual .qt-alert-one {
+    top: 110px;
+  }
+
+  .qt-horizontal-visual .qt-alert-two {
+    bottom: 35px;
+  }
+
+  /* Pressure scene */
+  .qt-horizontal-visual .qt-fragment-canvas {
+    height: 290px;
+  }
+
+  .qt-horizontal-visual .qt-fragment-card {
+    width: 125px;
+    min-height: 90px;
+    padding: 9px;
+  }
+
+  /* Kitchen scene */
+  .qt-horizontal-visual .qt-kitchen-scene {
+    padding: 13px;
+  }
+
+  .qt-horizontal-visual .qt-kitchen-metrics {
+    margin: 12px 0 9px;
+  }
+
+  .qt-horizontal-visual .qt-kitchen-metrics > div {
+    padding: 8px;
+  }
+
+  .qt-horizontal-visual .qt-kitchen-orders {
+    gap: 6px;
+  }
+
+  .qt-horizontal-visual .qt-kitchen-order {
+    padding: 8px 10px;
+  }
+
+  .qt-horizontal-visual .qt-kitchen-order-main {
+    margin: 7px 0;
+  }
+
+  .qt-horizontal-visual .qt-kitchen-sync {
+    margin-top: 8px;
+    padding: 8px;
+  }
+
+  /* Phone scene */
+  .qt-horizontal-visual .qt-phone-scene {
+    min-height: 0;
+    flex: 1;
+  }
+
+  .qt-horizontal-visual .qt-phone {
+    transform: scale(0.88);
+  }
+
+  /* Relief scene */
+  .qt-horizontal-visual .qt-relief-scene {
+    min-height: 0;
+    flex: 1;
+  }
+}
+
+/* Short desktop screens */
+@media (min-width: 761px) and (max-height: 800px) {
+  .qt-horizontal-panel {
+    height: 550px;
+    min-height: 550px;
+    padding: 25px 32px;
+  }
+
+  .qt-horizontal-visual .qt-story-stage {
+    padding: 17px 18px 13px;
+  }
+
+  .qt-horizontal-copy h3 {
+    font-size: 29px;
+  }
+
+  .qt-horizontal-visual .qt-fragment-canvas {
+    height: 250px;
+  }
+}/* =========================================================
+   QRTOKEN — MOBILE VERTICAL STORY EXPERIENCE
+   Desktop: Horizontal panels
+   Mobile: Original vertical chapter flow
+========================================================= */
+
+@media (max-width: 760px) {
+
+  /* Story wrapper */
+  .qt-story {
+    padding: 70px 0 65px;
+    overflow: hidden;
+  }
+
+  .qt-story-intro {
+    margin-bottom: 45px;
+  }
+
+  /* Hide desktop navigation controls */
+  .qt-story-rail-top {
+    padding: 0 20px;
+  }
+
+  .qt-story-controls {
+    display: none;
+  }
+
+  /* Restore vertical chapter flow */
+  .qt-story-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 55px;
+    overflow: visible;
+    padding: 0 17px;
+    scroll-snap-type: none;
+  }
+
+  /* Every chapter becomes a vertical block */
+  .qt-horizontal-panel {
+    display: flex;
+    flex: none;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 24px;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    opacity: 1;
+    transform: none;
+    scroll-snap-align: none;
+  }
+
+  .qt-horizontal-panel::before {
+    display: none;
+  }
+
+  .qt-horizontal-panel.is-active {
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* Chapter text */
+  .qt-horizontal-copy {
+    width: 100%;
+    max-width: none;
+    padding: 0 5px;
+  }
+
+  .qt-horizontal-number {
+    width: 38px;
+    height: 38px;
+    margin-bottom: 19px;
+    font-size: 11px;
+  }
+
+  .qt-horizontal-copy .qt-chapter-label {
+    margin-bottom: 12px;
+    font-size: 8px;
+  }
+
+  .qt-horizontal-copy h3 {
+    max-width: 430px;
+    font-size: clamp(25px, 7vw, 34px);
+    line-height: 1.14;
+  }
+
+  .qt-horizontal-copy > p {
+    max-width: 450px;
+    font-size: 12px;
+    line-height: 1.85;
+  }
+
+  .qt-horizontal-copy .qt-chapter-emphasis {
+    margin-top: 17px;
+    font-size: 10px;
+  }
+
+  .qt-horizontal-hint {
+    display: none;
+  }
+
+  /* Scene comes below its chapter text */
+  .qt-horizontal-visual {
+    width: 100%;
+    height: auto;
+    min-width: 0;
+    display: block;
+  }
+
+  .qt-horizontal-visual .qt-story-stage {
+    width: 100%;
+    height: auto;
+    min-height: 440px;
+    max-height: none;
+    display: block;
+    padding: 22px 17px 18px;
+    border-radius: 19px;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading {
+    margin-bottom: 20px;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading h3 {
+    font-size: 18px;
+  }
+
+  .qt-horizontal-visual .qt-scene-heading p {
+    font-size: 10px;
+  }
+
+  /* Keep each illustration at a natural mobile size */
+  .qt-horizontal-visual .qt-rush-scene {
+    min-height: 330px;
+  }
+
+  .qt-horizontal-visual .qt-fragment-canvas {
+    height: 290px;
+  }
+
+  .qt-horizontal-visual .qt-phone-scene {
+    min-height: 360px;
+  }
+
+  .qt-horizontal-visual .qt-phone {
+    transform: none;
+  }
+
+  .qt-horizontal-visual .qt-kitchen-scene {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .qt-horizontal-visual .qt-relief-scene {
+    min-height: 360px;
+  }
+
+  /* Hide horizontal progress/navigation */
+  .qt-story-rail-bottom {
+    display: none;
+  }
+
+  /* Ending */
+  .qt-story-ending {
+    margin-top: 65px;
+    padding: 0 18px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 420px) {
+  .qt-story-rail {
+    gap: 45px;
+    padding: 0 13px;
+  }
+
+  .qt-horizontal-copy h3 {
+    font-size: 27px;
+  }
+
+  .qt-horizontal-visual .qt-story-stage {
+    min-height: 420px;
+    padding: 19px 13px 16px;
+  }
+
+  .qt-horizontal-visual .qt-fragment-card {
+    width: 105px;
+    padding: 9px;
+  }
+
+  .qt-horizontal-visual .qt-phone {
+    transform: scale(0.94);
+  }
+}
+/* =========================================================
+   QRToken — SWIPE PERFORMANCE OPTIMISATION
+========================================================= */
+
+.qt-story-rail {
+  scroll-snap-type: x proximity;
+  scroll-behavior: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.qt-horizontal-panel {
+  scroll-snap-stop: normal;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.qt-horizontal-panel:not(.is-active) {
+  opacity: 0.65;
+  transform: none;
+}
+
+.qt-horizontal-panel.is-active {
+  opacity: 1;
+  transform: none;
+}
+
+.qt-story-visual-placeholder {
+  width: 100%;
+  min-height: 510px;
+  border-radius: 23px;
+}
+
+.qt-scene-transition {
+  filter: none !important;
+  will-change: auto;
+}
+
+@media (max-width: 760px) {
+  .qt-story-visual-placeholder {
+    display: none;
+  }
+
+  .qt-horizontal-panel {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qt-story-rail {
+    scroll-behavior: auto;
+  }
+}

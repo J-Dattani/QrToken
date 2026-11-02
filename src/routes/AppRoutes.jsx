@@ -1,6 +1,9 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
 
+// Main Landing Page
+import LandingPage from "../LandingPage";
+
 // Customer Pages
 import MenuPage from "../customer/pages/MenuPage";
 import CartPage from "../customer/pages/CartPage";
@@ -28,18 +31,15 @@ import AnalyticsPage from "../owner/pages/AnalyticsPage";
 import SettingsPage from "../owner/pages/SettingsPage";
 import ProtectedOwnerRoute from "../owner/routes/ProtectedOwnerRoute";
 
-// Admin Pages
+// Super Admin Pages
 import AdminPage from "../admin/AdminPage";
 import AdminLoginPage from "../admin/pages/AdminLoginPage";
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* Root redirect to Customer Shop */}
-      <Route
-        path="/"
-        element={<Navigate to="/shop/shree-krishna-tea-stall" replace />}
-      />
+      {/* Main Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
 
       {/* Customer Routes */}
       <Route path="/shop/:merchantId" element={<MenuPage />} />
@@ -49,20 +49,23 @@ function AppRoutes() {
       <Route path="/track/:orderId" element={<TrackOrderPage />} />
       <Route path="/order-success" element={<OrderSuccessfulPage />} />
 
-      {/* Owner Auth Routes */}
+      {/* Owner Authentication Routes */}
       <Route path="/login" element={<OwnerLogin />} />
       <Route path="/register" element={<OwnerRegister />} />
+
       <Route
         path="/owner/login"
         element={<Navigate to="/login" replace />}
       />
+
       <Route
         path="/owner/register"
         element={<Navigate to="/register" replace />}
       />
+
       <Route path="/api-test" element={<ApiTestPage />} />
 
-      {/* Owner Console Protected Routes */}
+      {/* Protected Owner Console Routes */}
       <Route element={<ProtectedOwnerRoute />}>
         <Route path="/owner" element={<OwnerLayout />}>
           <Route index element={<LiveOrdersPage />} />
@@ -72,10 +75,12 @@ function AppRoutes() {
           <Route path="tables" element={<TableSessionsPage />} />
           <Route path="history" element={<OrderHistoryPage />} />
           <Route path="cash" element={<CashManagementPage />} />
+
           <Route
             path="reconciliation"
             element={<CashReconciliationPage />}
           />
+
           <Route path="refunds" element={<RefundsPage />} />
           <Route path="menu" element={<MenuManagerPage />} />
           <Route path="coupons" element={<CouponsPage />} />
