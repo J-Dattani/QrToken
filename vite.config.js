@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -24,21 +25,21 @@ export default defineConfig({
         scope: "/",
         icons: [
           {
-            src: "/pwa-192x192.svg",
+            src: "/pwa-192x192.png",
             sizes: "192x192",
-            type: "image/svg+xml",
+            type: "image/png",
           },
           {
-            src: "/pwa-512x512.svg",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
-            type: "image/svg+xml",
+            type: "image/png",
           },
         ],
       },
     }),
   ],
   server: {
-    host: true, // Listen on 0.0.0.0 so all network devices can access
-    allowedHosts: true, // Allow any hostname or IP
+    host: true,
+    allowedHosts: true,
   },
 });
