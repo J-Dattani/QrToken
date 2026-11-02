@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from "react-router-dom";
 
 // Customer Pages
@@ -27,8 +28,9 @@ import AnalyticsPage from "../owner/pages/AnalyticsPage";
 import SettingsPage from "../owner/pages/SettingsPage";
 import ProtectedOwnerRoute from "../owner/routes/ProtectedOwnerRoute";
 
-// Admin Page
+// Admin Pages
 import AdminPage from "../admin/AdminPage";
+import AdminLoginPage from "../admin/pages/AdminLoginPage";
 
 function AppRoutes() {
   return (
@@ -50,8 +52,14 @@ function AppRoutes() {
       {/* Owner Auth Routes */}
       <Route path="/login" element={<OwnerLogin />} />
       <Route path="/register" element={<OwnerRegister />} />
-      <Route path="/owner/login" element={<Navigate to="/login" replace />} />
-      <Route path="/owner/register" element={<Navigate to="/register" replace />} />
+      <Route
+        path="/owner/login"
+        element={<Navigate to="/login" replace />}
+      />
+      <Route
+        path="/owner/register"
+        element={<Navigate to="/register" replace />}
+      />
       <Route path="/api-test" element={<ApiTestPage />} />
 
       {/* Owner Console Protected Routes */}
@@ -64,7 +72,10 @@ function AppRoutes() {
           <Route path="tables" element={<TableSessionsPage />} />
           <Route path="history" element={<OrderHistoryPage />} />
           <Route path="cash" element={<CashManagementPage />} />
-          <Route path="reconciliation" element={<CashReconciliationPage />} />
+          <Route
+            path="reconciliation"
+            element={<CashReconciliationPage />}
+          />
           <Route path="refunds" element={<RefundsPage />} />
           <Route path="menu" element={<MenuManagerPage />} />
           <Route path="coupons" element={<CouponsPage />} />
@@ -78,7 +89,8 @@ function AppRoutes() {
         />
       </Route>
 
-      {/* Admin Route */}
+      {/* Super Admin Routes */}
+      <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/admin" element={<AdminPage />} />
 
       {/* Fallback 404 */}
