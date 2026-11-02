@@ -66,8 +66,16 @@ function CheckoutModal({
         return;
       }
 
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+console.log("Razorpay Key Check:", {
+  available: Boolean(razorpayKey),
+  prefix: razorpayKey?.slice(0, 9),
+});
+
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        // key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: razorpayKey,
 
         amount: order.total * 100,
 
